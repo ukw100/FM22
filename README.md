@@ -33,7 +33,7 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
   * [Fahrstraßen](#fahrstraßen)
   * [Weichentest](#weichentest)
   * [S88-Module](#s88-module)
-  * RailCom-Module(#railcom-module]
+  * [RailCom®-Module](#railcom-module)
 * [Programmierung über Programmiergleis](#programmierung-über-programmiergleis)
   * [PGM Decoder-Info](#pgm-decoder-info)
   * [PGM Decoder-Adresse](#pgm-decoder-adresse)
@@ -44,11 +44,11 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
   * [POM Decoder-CV](#pom-decoder-cv)
   * [POM Funktionsmapping](#pom-funktionsmapping)
   * [POM Funktionsausgänge](#pom-funktionsausgänge)
-* Zentrale
+* [Zentrale](#zentrale)
   * [Einstellungen](#einstellungen)
-  * [Konfiguration Netzwerk](#konfigration-netzwerk)
-  * [Firmware-Updates](#firmware-updates]
-* Anhang
+  * [Konfiguration Netzwerk](#konfiguration-netzwerk)
+  * [Firmware-Updates](#firmware-updates)
+* [Anhang](#anhang)
 
 ## Aufbau der DCC-Zentrale
 
@@ -114,7 +114,7 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 ![DCC-FM22 S88-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/aktionen-s88.png "S88-Module")
 
-### RailCom-Module
+### RailCom®-Module
 
 ![DCC-FM22 RailCom-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/rcl.png "RailCom-Module")
 
@@ -190,5 +190,4 @@ _RailCom®_
 "RailCom" ist eine auf den Namen von Lenz Elektronik für die Klasse 9 "Elektronische 
 Steuerungen" unter der Nummer 301 16 303 eingetragene Deutsche Marke sowie ein für die 
 Klassen 21, 23, 26, 36 und 38 "Electronic Controls for Model Railways" in U.S.A. unter 
-Reg. Nr. 2,746,080 eingetragene Trademark. Das Europäische Patent 1 380 326 B1 wurde 
-aufgehoben. Damit ist RailCom unter Beachtung der Warenzeichen frei verwendbar.
+Reg. Nr. 2,746,080 eingetragene Trademark.
