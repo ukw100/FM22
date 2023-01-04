@@ -24,30 +24,31 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 ## Inhaltsverzeichnis
 
-- Aufbau der DCC-Zentrale
-- Notwendige Hardware
-- Steuerung
--- Lokliste
--- Zusatzdecoder
--- Weichen
--- Fahrstraßen
--- Weichentest
--- S88-Module
--- RailCom®-Module
-- Programmierung über Programmiergleis
--- Decoder-Info
--- Decoder-Adresse
--- Decoder-CV
-- Programmierung über Hauptgleis (POM)
--- Decoder-Info
--- Decoder-Adresse
--- Decoder-CV
--- Funktionsmapping
--- Funktionsausgänge
-- Zentrale
--- Einstellungen
--- Konfiguration Netzwerk
--- Firmware-Updates
+* [Aufbau der DCC-Zentrale](#aufbau-der-dcc-zentrale)
+* [Notwendige Hardware](#notwendige-hardware)
+* [Steuerung](#steuerung)
+  * [Lokliste](#lokliste)
+  * [Zusatzdecoder](#zusatzdecoder)
+  * [Weichen](#weichen)
+  * [Fahrstraßen](#fahrstraßen)
+  * [Weichentest](#weichentest)
+  * [S88-Module](#s88-module)
+  * RailCom-Module(#railcom-module]
+* [Programmierung über Programmiergleis](#programmierung-über-programmiergleis)
+  * [PGM Decoder-Info](#pgm-decoder-info)
+  * [PGM Decoder-Adresse](#pgm-decoder-adresse)
+  * [PGM Decoder-CV](#pgm-decoder-cv)
+* [Programmierung über Hauptgleis (POM)](#programmierung-über-hauptgleis-pom)
+  * [POM Decoder-Info](#pom-decoder-info)
+  * [POM Decoder-Adresse](#pom-decoder-adresse)
+  * [POM Decoder-CV](#pom-decoder-cv)
+  * [POM Funktionsmapping](#pom-funktionsmapping)
+  * [POM Funktionsausgänge](#pom-funktionsausgänge)
+* Zentrale
+  * [Einstellungen](#einstellungen)
+  * [Konfiguration Netzwerk](#konfigration-netzwerk)
+  * [Firmware-Updates](#firmware-updates]
+* Anhang
 
 ## Aufbau der DCC-Zentrale
 
@@ -113,7 +114,7 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 ![DCC-FM22 S88-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/aktionen-s88.png "S88-Module")
 
-### RailCom®-Module
+### RailCom-Module
 
 ![DCC-FM22 RailCom-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/rcl.png "RailCom-Module")
 
@@ -125,33 +126,33 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 ![DCC-FM22 Menu Programmierung](https://raw.githubusercontent.com/ukw100/FM22/main/images/menu2.png "Menu Programmierung")
 
-### Decoder-Info
+### PGM Decoder-Info
 
 ![DCC-FM22 Decoder-Info](https://raw.githubusercontent.com/ukw100/FM22/main/images/pgm-info-3.png " Decoder-Info")
 
-### Decoder-Adresse
+### PGM Decoder-Adresse
 
 ![DCC-FM22 Decoder-Info](https://raw.githubusercontent.com/ukw100/FM22/main/images/pgm-addr-2.png " Decoder-Info")
 
-### Decoder-CV
+### PGM Decoder-CV
 
 ![DCC-FM22 Decoder-CV](https://raw.githubusercontent.com/ukw100/FM22/main/images/pgm-cv-2.png " Decoder-CV")
 
 ## Programmierung über Hauptgleis (POM)
 
-### Decoder-Info
+### POM Decoder-Info
 
 ![DCC-FM22 Decoder-Info](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-info-2.png "Decoder-Info")
 
-### Decoder-Adresse
+### POM Decoder-Adresse
 
 ![DCC-FM22 Decoder-Adresse](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-addr.png "Decoder-Adresse")
 
-### Decoder-CV
+### POM Decoder-CV
 
 ![DCC-FM22 Decoder-CV](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-cv.png "Decoder-CV")
 
-### Funktionsmapping
+### POM Funktionsmapping
 
 ![DCC-FM22 Funktionsmapping](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-1.png "Funktionsmapping")
 
@@ -159,7 +160,7 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 ![DCC-FM22 Funktionsmapping ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-esu.png "Funktionsmapping ESU")
 
-### Funktionsausgänge
+### POM Funktionsausgänge
 
 ![DCC-FM22 Funktionsausgänge Adresse](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-1.png "Funktionsausgänge Adresse")
 
