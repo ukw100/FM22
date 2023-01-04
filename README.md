@@ -1,6 +1,8 @@
 # DCC-Zentrale FM22
 ## _DCC-Zentrale - auch für Mittelleiter-Systeme_
 
+This project is still in the process of development. A translation into English will be done as soon as the documentation is complete.
+
 Dieses Projekt ist noch in der Entstehung. Eine Übersetzung ins Englische wird erfolgen, sobald die Dokumentation vollständig ist.
 
 ![DCC-FM22 Lokliste](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok1.png "Lokliste")
