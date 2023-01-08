@@ -61,7 +61,7 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 Das Menü "Steuerung" bietet folgende Punkte:
 
-<img align="right" src="https://github.com/ukw100/FM22/main/images/menu1.png">
+<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/lok1.png">
 
 Hier geht es zu den entsprechenden Unterkapiteln:
 
