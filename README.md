@@ -61,15 +61,17 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 Das Menü "Steuerung" bietet folgende Punkte:
 
-![DCC-FM22 Menu Steuerung](https://raw.githubusercontent.com/ukw100/FM22/main/images/menu1.png "Menu Steuerung")
+<img align="right" src="https://github.com/ukw100/FM22/main/images/menu1.png">
+
+Hier geht es zu den entsprechenden Unterkapiteln:
 
 * [Lokliste](#lokliste)
 * [Zusatzdecoder](#zusatzdecoder)
 * [Weichen](#weichen)
 * [Fahrstraßen](#fahrstraßen)
 * [Weichentest](#weichentest)
-* [S88-Module](#s88-module)
-* [RailCom®-Module](#railcom-module)
+* [S88](#s88-module)
+* [RC-Detektoren](#railcom-module)
 
 ### Lokliste
 
