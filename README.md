@@ -36,6 +36,7 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
   * [Weichentest](#weichentest)
   * [S88-Module](#s88-module)
   * [RailCom®-Module](#railcom-module)
+* [Programmierung](#programmierung)
 * [Programmierung über Programmiergleis](#programmierung-über-programmiergleis)
   * [PGM Decoder-Info](#pgm-decoder-info)
   * [PGM Decoder-Adresse](#pgm-decoder-adresse)
@@ -130,7 +131,7 @@ Im obigen Beispiel wird als Lokadresse 1013, als Aufenthaltsort "Einfahrt Schatt
 ausgegeben. Außerdem ist gerade die Funktion F0 "Spitzensignal / Schlußlicht rot" aktiv.
 
 Alle Ausgaben können sich sofort ändern, wenn eine andere Person oder eine aktivierte Ereignissteuerung in den Ablauf eingreift. Mittels
-Schieberegler kann die Geschwindigkeit und mit den Pfeilen darunter kann die Fahrtrichtung geändert werden. Ein Klick auf das schwarze Quadrat
+Schieberegler kann die Geschwindigkeit, mit den Pfeilen darunter kann die Fahrtrichtung geändert werden. Ein Klick auf das schwarze Quadrat
 stellt die Geschwindigkeit auf 0, ein Klick auf den schwarzen Kreis daneben führt einen Notstopp aus, d.h. die Lok bleibt dann sofort stehen - ohne
 Berücksichtigung irgendwelcher eingesteller Bremsverzögerungen.
 
@@ -207,9 +208,25 @@ die Lokliste also neu sortieren.
 
 ![DCC-FM22 RailCom-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/aktionen-rcl.png "RailCom-Module")
 
+## Programmierung
+
+Das Menü "Programmierung" bietet folgende Punkte:
+
+<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/menu2.png">
+
+* [Programmierung über Programmiergleis](#programmierung-über-programmiergleis)
+  * [PGM Decoder-Info](#pgm-decoder-info)
+  * [PGM Decoder-Adresse](#pgm-decoder-adresse)
+  * [PGM Decoder-CV](#pgm-decoder-cv)
+* [Programmierung über Hauptgleis (POM)](#programmierung-über-hauptgleis-pom)
+  * [POM Decoder-Info](#pom-decoder-info)
+  * [POM Decoder-Adresse](#pom-decoder-adresse)
+  * [POM Decoder-CV](#pom-decoder-cv)
+  * [POM Funktionsmapping](#pom-funktionsmapping)
+  * [POM Funktionsausgänge](#pom-funktionsausgänge)
+
 ## Programmierung über Programmiergleis
 
-![DCC-FM22 Menu Programmierung](https://raw.githubusercontent.com/ukw100/FM22/main/images/menu2.png "Menu Programmierung")
 
 ### PGM Decoder-Info
 
