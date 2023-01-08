@@ -98,6 +98,10 @@ static const char * esu_output_modes[ESU_OUTPUT_MODES] =
     "PowerPack Control",                            // 31
 };
 
+static uint32_t                 read_retries;
+static uint32_t                 num_reads;
+static uint32_t                 time_reads;
+
 static uint8_t                  esu_output_mode_values[ESU_OUTPUT_LINES][ESU_OUTPUT_COLS];
 static uint8_t                  new_esu_output_mode_values[ESU_OUTPUT_LINES][ESU_OUTPUT_COLS];
 static uint_fast16_t            esu_output_changes = 0;
@@ -195,55 +199,49 @@ get_esu_output_modes (uint_fast16_t addr)
 {
     uint_fast8_t    line;
     uint_fast8_t    col;
-    uint_fast16_t   cv;
+    uint_fast8_t    cv;
     uint_fast8_t    cv31_value = 16;
     uint_fast8_t    cv32_value = 0;
-    uint_fast8_t    value;
+    uint_fast8_t    values[4];
     bool            rtc = false;
 
-    if (POM::pom_write_cv_index (addr, cv31_value, cv32_value))
+    POM::pom_reset_num_reads ();
+    time_reads = time ((time_t *) NULL);
+
+    HTTP::response += (String) "<progress id='progress' max='" + std::to_string(ESU_OUTPUT_LINES) + "' value='0'></progress>\r\n";
+
+    for (line = 0; line < ESU_OUTPUT_LINES; line++)
     {
-        HTTP::response += (String) "<progress id='progress' max='" + std::to_string(ESU_OUTPUT_LINES) + "' value='0'></progress>\r\n";
-
-        for (line = 0; line < ESU_OUTPUT_LINES; line++)
-        {
-            HTTP::response += (String) "<script>document.getElementById('progress').value = " + std::to_string(line + 1) + ";</script>";
-            HTTP::flush ();
-
-            for (col = 0; col < ESU_OUTPUT_COLS; col++)
-            {
-                cv = 8 * line + col + 259;
-
-                if (! POM::pom_read_cv (&value, addr, cv))
-                {
-                    fprintf (stderr, "read error: cv=%u\n", cv);
-                    break;
-                }
-
-                esu_output_mode_values[line][col] = value;
-            }
-
-            if (col < ESU_OUTPUT_COLS)
-            {
-                break;
-            }
-        }
-
-        HTTP::response += (String) "<script>document.getElementById('progress').style.display = 'none';</script>";
+        HTTP::response += (String) "<script>document.getElementById('progress').value = " + std::to_string(line + 1) + ";</script>";
         HTTP::flush ();
 
-        if (line == ESU_OUTPUT_LINES)
+        cv = 8 * line + 259 - 257;
+
+        if (! POM::xpom_read_cv (values, 1, addr, cv31_value, cv32_value, cv))
         {
-            memcpy (new_esu_output_mode_values, esu_output_mode_values, ESU_OUTPUT_LINES * ESU_OUTPUT_COLS);
-            esu_output_changes = 0;
-            rtc = true;
+            fprintf (stderr, "read error: cv=%u\n", cv);
+            break;
+        }
+
+        for (col = 0; col < 4; col++)
+        {
+            esu_output_mode_values[line][col] = values[col];
         }
     }
-    else
+
+    HTTP::response += (String) "<script>document.getElementById('progress').style.display = 'none';</script>";
+    HTTP::flush ();
+
+    if (line == ESU_OUTPUT_LINES)
     {
-        HTTP::response += (String) "CV index (CV31=16, CV32=0) kann nicht gespeichert werden.";
+        memcpy (new_esu_output_mode_values, esu_output_mode_values, ESU_OUTPUT_LINES * ESU_OUTPUT_COLS);
+        esu_output_changes = 0;
+        rtc = true;
     }
 
+    read_retries = POM::pom_get_read_retries ();
+    num_reads = POM::pom_get_num_reads ();
+    time_reads = time ((time_t *) NULL) - time_reads;
     return rtc;
 }
 
@@ -257,6 +255,8 @@ print_esu_output_modes (void)
     uint_fast8_t    auto_off;
     uint_fast8_t    brightness;
 
+    HTTP::response += (String) std::to_string (num_reads) + " CV-Werte gelesen per XPOM, dabei mussten " + std::to_string(read_retries) + " Lesevorg&auml;nge wiederholt werden. \r\n";
+    HTTP::response += (String) "Ben&ouml;tigte Zeit: " + std::to_string(time_reads) + " sec<BR>\r\n";;
     HTTP::response += (String) "<table style='border:1px solid gray'>\r\n";
     HTTP::response += (String) "<tr><th align='right'>Ausgang</th><th>Mode</th><th>EV</th><th>AV</th><th>AutoAb</th><th>Hell</th></tr>\r\n";
 
@@ -300,6 +300,13 @@ static bool
 get_lenz_output_modes (uint_fast16_t addr)
 {
     (void) addr;
+
+    POM::pom_reset_num_reads ();
+    time_reads = time ((time_t *) NULL);
+
+    read_retries = POM::pom_get_read_retries ();
+    num_reads = POM::pom_get_num_reads ();
+    time_reads = time ((time_t *) NULL) - time_reads;
     return true;
 }
 
@@ -312,6 +319,13 @@ static bool
 get_tams_output_modes (uint_fast16_t addr)
 {
     (void) addr;
+
+    POM::pom_reset_num_reads ();
+    time_reads = time ((time_t *) NULL);
+
+    read_retries = POM::pom_get_read_retries ();
+    num_reads = POM::pom_get_num_reads ();
+    time_reads = time ((time_t *) NULL) - time_reads;
     return true;
 }
 

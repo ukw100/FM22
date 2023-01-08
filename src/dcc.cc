@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------------------------------------------------
- * dcc.c - send DCC commands to STM32F4
+ * dcc.cc - send DCC commands to STM32F4
  *------------------------------------------------------------------------------------------------------------------------
  * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
  *
@@ -48,9 +48,10 @@
 #define CMD_PGM_WRITE_ADDRESS           0x14
 
 #define CMD_POM_READ_CV                 0x21
-#define CMD_POM_WRITE_CV                0x22
-#define CMD_POM_WRITE_CV_BIT            0x23
-#define CMD_POM_WRITE_ADDRESS           0x24
+#define CMD_XPOM_READ_CV                0x22
+#define CMD_POM_WRITE_CV                0x23
+#define CMD_POM_WRITE_CV_BIT            0x24
+#define CMD_POM_WRITE_ADDRESS           0x25
 
 #define CMD_LOCO_28                     0x31
 #define CMD_LOCO_FUNCTION_F00_F04       0x32
@@ -93,6 +94,7 @@ uint16_t                                DCC::pgm_min_cnt;
 uint16_t                                DCC::pgm_max_cnt;
 
 POM_CV                                  DCC::pom_cv;
+XPOM_CV                                 DCC::xpom_cv;
 PGM_CV                                  DCC::pgm_cv;
 
 uint_fast8_t                            DCC::mode        = RAILCOM_MODE;
@@ -527,6 +529,54 @@ DCC::pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv)
             if (pom_cv.addr == addr && pom_cv.cv == cv)
             {
                 *valuep = pom_cv.cv_value;
+                return true;
+            }
+        }
+        usleep (1000);  // sleep one millisecond        
+    }
+
+    return false;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * xpom_read_cv () - read value of CV
+ *
+ * Attention: cv_range means VVVVVVVV00 - VVVVVVVV11
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+bool
+DCC::xpom_read_cv (uint_fast8_t * valuep, uint_fast8_t n, uint_fast16_t addr, uint_fast8_t cv31, uint_fast8_t cv32, uint_fast8_t cv_range)
+{
+    uint8_t         buf[7];
+
+    buf[0] = CMD_XPOM_READ_CV;
+    buf[1] = n;
+    buf[2] = addr >> 8;
+    buf[3] = addr & 0xFF;
+    buf[4] = cv31;
+    buf[5] = cv32;
+    buf[6] = cv_range;
+
+    send_cmd (buf, 7, true);
+
+    xpom_cv.valid = 0;
+
+    unsigned long next_millis = Millis::elapsed() + WAIT_FOR_POM_CV_MSEC;
+
+    while (Millis::elapsed() < next_millis)
+    {
+        MSG::read_msg ();
+
+        if (xpom_cv.valid)
+        {
+            if (xpom_cv.addr == addr && xpom_cv.cv31 == cv31 && xpom_cv.cv32 == cv32 && xpom_cv.cv_range == cv_range)
+            {
+                uint_fast8_t    i;
+
+                for (i = 0; i < 4 * n; i++)
+                {
+                    *valuep++ = xpom_cv.cv_value[i];
+                }
                 return true;
             }
         }

@@ -47,6 +47,10 @@ static uint_fast16_t            esu_output_mapping_changes;
 #define MAX_LENZ_MAP_LINES2     16          // 129 .. 144
 #define MAX_LENZ_MAP_LINES      (MAX_LENZ_MAP_LINES1 + MAX_LENZ_MAP_LINES2)
 
+static uint32_t                 read_retries;
+static uint32_t                 num_reads;
+static uint32_t                 time_reads;
+
 static uint8_t                  lenz_cv_map[MAX_LENZ_MAP_LINES];
 static uint8_t                  lenz_output_map[MAX_LENZ_MAP_LINES];
 static uint8_t                  new_lenz_output_map[MAX_LENZ_MAP_LINES];
@@ -73,10 +77,8 @@ get_esu_conditions (uint_fast16_t addr, uint_fast16_t lines)
 {
     uint16_t        cv;
     uint16_t        cv32;
-    uint16_t        last_cv32 = 0xFFFF;
     uint16_t        line;
     uint16_t        bytepos;
-    uint_fast8_t    value;
     String          color;
     bool            rtc = false;
 
@@ -89,27 +91,53 @@ get_esu_conditions (uint_fast16_t addr, uint_fast16_t lines)
 
         cv32 = (line / 16) + 3;
 
-        if (last_cv32 != cv32)
-        {
-            if (! POM::pom_write_cv (addr, 32, cv32, POM_WRITE_COMPARE_BEFORE_AND_AFTER_WRITE))
-            {
-                break;
-            }
-            last_cv32 = cv32;
-        }
+        bytepos = 0;
 
-        for (bytepos = 0; bytepos < MAX_ESU_CONDITION_COLS; bytepos++)
+        while (bytepos < MAX_ESU_CONDITION_COLS)
         {
-            cv = line * 16 + bytepos + 257;
+            uint8_t values[12];
+            uint8_t i;
 
-            if (! POM::pom_read_cv (&value, addr, cv))
+            cv = line * 16 + bytepos + 257 - 257;
+
+#if 1       // a little bit faster
+            if (! POM::xpom_read_cv (values, 3, addr, 16, cv32, cv))            // 3 * 4 = 12;
             {
                 fprintf (stderr, "read error: cv=%u\n", cv);
                 return false;
             }
 
-            esu_condition_map[line][bytepos] = value;
-        }       
+            for (i = 0; i < 12; i++)
+            {
+                if (bytepos < MAX_ESU_CONDITION_COLS)
+                {
+                    esu_condition_map[line][bytepos++] = values[i];
+                }
+                else
+                {
+                    break;
+                }
+            }
+#else
+            if (! POM::xpom_read_cv (values, 2, addr, 16, cv32, cv))            // 1 * 4 = 4;
+            {
+                fprintf (stderr, "read error: cv=%u\n", cv);
+                return false;
+            }
+
+            for (i = 0; i < 4; i++)
+            {
+                if (bytepos < MAX_ESU_CONDITION_COLS)
+                {
+                    esu_condition_map[line][bytepos++] = values[i];
+                }
+                else
+                {
+                    break;
+                }
+            }
+#endif
+        }
     }
 
     if (line == lines)
@@ -127,10 +155,8 @@ get_esu_outputs (uint_fast16_t addr, uint_fast16_t lines)
 {
     uint16_t        cv;
     uint16_t        cv32;
-    uint16_t        last_cv32 = 0xFFFF;
     uint16_t        line;
     uint16_t        bytepos;
-    uint_fast8_t    value;
     String          color;
     bool            rtc = false;
 
@@ -142,29 +168,32 @@ get_esu_outputs (uint_fast16_t addr, uint_fast16_t lines)
         HTTP::flush ();
 
         cv32 = (line / 16) + 8;
+        bytepos = 0;
 
-        if (last_cv32 != cv32)
+        while (bytepos < MAX_ESU_COLS)
         {
-            if (! POM::pom_write_cv (addr, 32, cv32, POM_WRITE_COMPARE_BEFORE_AND_AFTER_WRITE))
-            {
-                break;
-            }
-            last_cv32 = cv32;
-        }
+            uint8_t values[4];
+            uint8_t i;
 
-        for (bytepos = 0; bytepos < MAX_ESU_COLS; bytepos++)
-        {
-            cv = line * 16 + bytepos + 257;
+            cv = 16 * line + bytepos + 257 - 257;
 
-            if (! POM::pom_read_cv (&value, addr, cv))
+            if (! POM::xpom_read_cv (values, 1, addr, 16, cv32, cv))
             {
                 fprintf (stderr, "read error: cv=%u\n", cv);
                 return false;
             }
 
-            esu_output_map[line][bytepos] = value;
-
-            // printf ("%3d ", value);
+            for (i = 0; i < 4; i++)
+            {
+                if (bytepos < MAX_ESU_COLS)
+                {
+                    esu_output_map[line][bytepos++] = values[i];
+                }
+                else
+                {
+                    break;
+                }
+            }
         }       
     }
 
@@ -193,6 +222,8 @@ print_esu_mapping (uint_fast16_t lines)
     String          linebg;
 
     HTTP::response += (String) "<div class='div'>";
+    HTTP::response += (String) std::to_string (num_reads) + " CV-Werte gelesen per XPOM, dabei mussten " + std::to_string(read_retries) + " Lesevorg&auml;nge wiederholt werden. \r\n";
+    HTTP::response += (String) "Ben&ouml;tigte Zeit: " + std::to_string(time_reads) + " sec<BR>\r\n";;
 
     HTTP::response += (String) "<div style='display:inline-block; white-space:nowrap'>";
     HTTP::response += (String) "<span class='span1'>Bedingungen</span><span class='espan'></span>";
@@ -381,6 +412,9 @@ get_esu_mapping (uint_fast16_t addr, uint_fast16_t lines)
 
     HTTP::response += (String) "<progress id='progress' max='" + std::to_string(2 * lines) + "' value='0'></progress>\r\n";
 
+    POM::pom_reset_num_reads ();
+    time_reads = time ((time_t *) NULL);
+
     if (get_esu_conditions (addr, lines) && get_esu_outputs (addr, lines))
     {
         rtc = true;
@@ -393,6 +427,10 @@ get_esu_mapping (uint_fast16_t addr, uint_fast16_t lines)
     HTTP::response += (String) "<script>document.getElementById('progress').style.display = 'none';</script>";
     HTTP::flush ();
 
+    read_retries = POM::pom_get_read_retries ();
+    num_reads = POM::pom_get_num_reads ();
+    time_reads = time ((time_t *) NULL) - time_reads;
+
     return rtc;
 }
 
@@ -402,9 +440,9 @@ get_lenz_mapping (uint_fast16_t addr)
     uint_fast8_t    line;
     uint_fast8_t    start;
     uint_fast16_t   cv;
-    uint_fast8_t    value;
     bool            rtc = false;
 
+    POM::pom_reset_num_reads ();
     memset (lenz_output_map, 0, MAX_LENZ_MAP_LINES);
 
     lenz_cv_map[0] = 33;    // F0f
@@ -428,6 +466,9 @@ get_lenz_mapping (uint_fast16_t addr)
 
     HTTP::response += (String) "<progress id='progress' max='" + std::to_string(MAX_LENZ_MAP_LINES) + "' value='0'></progress>\r\n";
 
+#if 1
+    uint_fast8_t    value;
+
     for (line = 0; line < MAX_LENZ_MAP_LINES; line++)
     {
         HTTP::response += (String) "<script>document.getElementById('progress').value = " + std::to_string(line + 1) + ";</script>";
@@ -443,6 +484,30 @@ get_lenz_mapping (uint_fast16_t addr)
 
         lenz_output_map[line] = value;
     }
+#else // lenz does not support XPOM?
+    for (line = 0; line < 8; line++)
+    {
+        uint_fast8_t    cv31 = 16;
+        uint_fast8_t    cv32 = 0;
+        uint8_t         values[4];
+
+        HTTP::response += (String) "<script>document.getElementById('progress').value = " + std::to_string(line + 1) + ";</script>";
+        HTTP::flush ();
+
+        cv = lenz_cv_map[line] - 1;
+
+        if (! POM::xpom_read_cv (values, 1, cv31, cv32, addr, cv))
+        {
+            fprintf (stderr, "read error: cv=%u\n", cv);
+            break;
+        }
+
+        lenz_output_map[line++] = values[0];
+        lenz_output_map[line++] = values[1];
+        lenz_output_map[line++] = values[2];
+        lenz_output_map[line] = values[3];
+    }
+#endif
 
     HTTP::response += (String) "<script>document.getElementById('progress').style.display = 'none';</script>";
     HTTP::flush ();
@@ -454,6 +519,9 @@ get_lenz_mapping (uint_fast16_t addr)
         rtc = true;
     }
 
+    read_retries = POM::pom_get_read_retries ();
+    num_reads = POM::pom_get_num_reads ();
+    time_reads = time ((time_t *) NULL) - time_reads;
     return rtc;
 }
 
@@ -469,6 +537,7 @@ print_lenz_mapping (uint_fast16_t outputs)
     String          color;
     String          linebg;
 
+    HTTP::response += (String) "Lesevorgänge: " + std::to_string (num_reads) + ", davon mussten " + std::to_string (read_retries) + " wiederholt werden.<BR>\r\n";;
     HTTP::response += (String) "<div class='div'><div style='display:inline-block; white-space:nowrap'><span class='span'>CV</span>";
     HTTP::response += (String) "<span class='span2'>Beschreibung</span>";
     HTTP::response += (String) "<span class='span'>A</span><span class='span'>B</span><span class='span'>C</span><span class='span'>D</span>";
@@ -538,6 +607,8 @@ get_tams_mapping (uint_fast16_t addr, uint_fast16_t lines)
     uint_fast8_t    cv32_value = 255;
     uint_fast8_t    value;
     bool            rtc = false;
+
+    POM::pom_reset_num_reads ();
 
     if (POM::pom_read_cv (&value, addr, 96))                     // see RCN-225 CV96
     {
@@ -610,6 +681,9 @@ get_tams_mapping (uint_fast16_t addr, uint_fast16_t lines)
         HTTP::response += (String) "CV 96 kann nicht gelesen werden.";
     }
 
+    read_retries = POM::pom_get_read_retries ();
+    num_reads = POM::pom_get_num_reads ();
+    time_reads = time ((time_t *) NULL) - time_reads;
     return rtc;
 }
 
@@ -843,8 +917,21 @@ HTTP_POMMAP::handle_pommap (void)
 
         if (manu == MANUFACTURER_ESU)
         {
-            HTTP::response += (String) "<div style='padding:2px;'><span style='width:120px;display:inline-block;'>Anzahl Zeilen</span><span style='width:110px;display:inline-block;'><select name='lines' style='width:100%'>";
-            HTTP::response += (String) "<option value='16'>16</option><option value='32'>32</option><option value='72'>72</option></select></span></div>\r\n";
+            String selected_16 = "";
+            String selected_32 = "";
+            String selected_72 = "";
+
+            switch (lines)
+            {
+                case 16: selected_16 = "selected"; break;
+                case 32: selected_32 = "selected"; break;
+                case 72: selected_72 = "selected"; break;
+            }
+
+            HTTP::response += (String) "<div style='padding:2px;'><span style='width:120px;display:inline-block;'>Anzahl Zeilen</span><span style='width:110px;display:inline-block;'>";
+            HTTP::response += (String) "<select name='lines' style='width:100%'>";
+            HTTP::response += (String) "<option value='16'" + selected_16 + ">16</option><option value='32'" + selected_32 + ">32</option>";
+            HTTP::response += (String) "<option value='72'" + selected_72 + ">72</option></select></span></div>\r\n";
         }
         else if (manu == MANUFACTURER_LENZ)
         {
@@ -943,9 +1030,11 @@ HTTP_POMMAP::handle_pommap (void)
         HTTP::response += (String) "  http.send (null);\r\n";
         HTTP::response += (String) "}\r\n";
         HTTP::response += (String) "function saveesu() {\r\n";
+        HTTP::response += (String) "  document.body.style.cursor = 'wait';";
         HTTP::response += (String) "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=savemapesu&addr=" + saddr + "&lines=" + std::to_string(lines) + "');";
         HTTP::response += (String) "  http.addEventListener('load',";
-        HTTP::response += (String) "    function(event) { var text = http.responseText; if (http.status >= 200 && http.status < 300) { ";
+        HTTP::response += (String) "    function(event) { document.body.style.cursor = 'auto'; ";
+        HTTP::response += (String) "    var text = http.responseText; if (http.status >= 200 && http.status < 300) { ";
         HTTP::response += (String) "      if (text == '0') { document.getElementById('saveesu').style.display = 'none'; } ";
         HTTP::response += (String) "      else { document.getElementById('saveesu').style.display = ''; alert ('Schreibfehler') }";
         HTTP::response += (String) "  }});";
@@ -1274,7 +1363,7 @@ HTTP_POMMAP::action_savemapesu (void)
                         last_cv32 = cv32;
                     }
 
-                    cv = line * 16 + bytepos + 257;
+                    cv = (line % 16) * 16 + bytepos + 257;
 
                     if (POM::pom_write_cv (addr, cv, new_byte, POM_WRITE_COMPARE_AFTER_WRITE))
                     {
@@ -1284,7 +1373,7 @@ HTTP_POMMAP::action_savemapesu (void)
                         {
                             esu_condition_mapping_changes--;
                         }
-                        printf ("savemapesu: write successful, changes=%u\n", esu_condition_mapping_changes);
+                        printf ("savemapesu: write successful, addr=%u, cv32=%u cv=%u, value=%u changes=%u\n", addr, cv32, cv, new_byte, esu_condition_mapping_changes);
                     }
                     else
                     {
@@ -1320,7 +1409,7 @@ HTTP_POMMAP::action_savemapesu (void)
                             last_cv32 = cv32;
                         }
 
-                        cv = line * 16 + bytepos + 257;
+                        cv = (line % 16) * 16 + bytepos + 257;
 
                         if (POM::pom_write_cv (addr, cv, new_byte, POM_WRITE_COMPARE_AFTER_WRITE))
                         {

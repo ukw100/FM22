@@ -31,9 +31,15 @@ class POM
 {
     public:
         static bool     pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv);
+        static bool     xpom_read_cv (uint8_t * valuep, uint_fast8_t n, uint_fast16_t addr, uint_fast8_t cv31, uint_fast8_t cv32, uint_fast8_t cv);
+        static uint32_t pom_get_read_retries (void);
+        static uint32_t pom_get_num_reads (void);
+        static void     pom_reset_num_reads (void);
         static bool     pom_write_cv (uint_fast16_t addr, uint16_t cv, uint_fast8_t value, uint_fast8_t compare);
         static bool     pom_write_cv_index (uint_fast16_t addr, uint_fast8_t cv31, uint_fast8_t cv32);
     private:
+        static uint32_t sum_retries;
+        static uint32_t sum_reads;
 };
 
 #endif

@@ -12,7 +12,7 @@ Dieses Projekt ist noch in der Entstehung. Eine Übersetzung ins Englische wird 
 - RailCom®-fähige DCC-Zentrale
 - System: Raspberry Pi4 als Zentrale, STM32 als DCC-Controller
 - Bedienung über Webbrowser: Direkt am RasPi, Smartphone, Tablet oder auch PC
-- Mehrbenutzer-System: Bedienung von mehreren Personen gleichzeitig möglich
+- Multiuser-System: Bedienung durch mehrere Personen gleichzeitig möglich
 - Automatisierte Abläufe über Lok-Makros und durch S88/RailCom ausgelöste Aktionen
 - Feststellung des Aufenthaltsortes aller Loks über RailCom
 - Software-Lösungen für Pendelzugsteuerung, Bremsstrecken, Blocksteuerungen usw.

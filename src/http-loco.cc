@@ -377,8 +377,23 @@ HTTP_Loco::handle_loco_macro_edit (void)
     HTTP::flush ();
 
     HTTP::response += (String) "<form method='get' action='" + url + "'>"
-                + "<table style='border:1px lightgray solid;'>\r\n"
-                + "<tr bgcolor='#e0e0e0'><td>ID:</td><td>M" + std::to_string(macroidx + 1) + "</td></tr>\r\n";
+                    + "<table style='border:1px lightgray solid;'>\r\n"
+                    + "<tr bgcolor='#e0e0e0'><td>ID:</td><td>M";
+
+    if (macroidx == 0)
+    {
+        HTTP::response += (String) "F";
+    }
+    else if (macroidx == 1)
+    {
+        HTTP::response += (String) "H";
+    }
+    else
+    {
+        HTTP::response += std::to_string(macroidx + 1);
+    }
+
+    HTTP::response += (String) "</td></tr>\r\n";
 
     HTTP::flush ();
 
@@ -1242,7 +1257,6 @@ HTTP_Loco::handle_loco (void)
 void
 HTTP_Loco::action_locos (void)
 {
-    static uint32_t n_calls;
     uint_fast16_t   n_locos = Loco::get_n_locos ();
     uint_fast16_t   loco_idx;
 
@@ -1252,6 +1266,7 @@ HTTP_Loco::action_locos (void)
     {
         uint_fast8_t    is_online   = Loco::is_online (loco_idx);
         bool            is_halt     = Loco::get_flag_halt (loco_idx);
+        uint_fast8_t    rc2_rate    = Loco::get_rc2_rate (loco_idx);
         String          id;
 
         id = (String) "o" + std::to_string(loco_idx);
@@ -1272,15 +1287,8 @@ HTTP_Loco::action_locos (void)
             HTTP_Common::add_action_content (id, "color", "");
         }
 
-        n_calls++;
-
-        if (n_calls == 10)
-        {
-            uint_fast8_t    rc2_rate    = Loco::get_rc2_rate (loco_idx);
-            id = (String) "rc2r" + std::to_string(loco_idx);
-            HTTP_Common::add_action_content (id, "text", std::to_string(rc2_rate) + "%");
-            n_calls = 0;
-        }
+        id = (String) "rc2r" + std::to_string(loco_idx);
+        HTTP_Common::add_action_content (id, "text", std::to_string(rc2_rate) + "%");
 
         const char * slocation = HTTP_Common::get_location (loco_idx);
 

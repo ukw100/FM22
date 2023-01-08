@@ -27,7 +27,11 @@
 #include "dcc.h"
 #include "pom.h"
 
-#define POM_READ_MAX_TRIES                          10
+#define POM_READ_MAX_TRIES      10
+#define XPOM_READ_MAX_TRIES     20
+
+uint32_t                        POM::sum_retries;
+uint32_t                        POM::sum_reads;
 
 /*------------------------------------------------------------------------------------------------------------------------
  * pom_read_cv () - read value of CV
@@ -37,24 +41,77 @@ bool
 POM::pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv)
 {
     uint_fast8_t    tries;
-    bool            rtc = true;
+    bool            rtc = false;
 
     for (tries = 0; tries < POM_READ_MAX_TRIES; tries++)
     {
-        // printf ("pom_read_cv: addr=%u cv=%u\n", addr, cv);
-
         if (DCC::pom_read_cv (valuep, addr, cv))
         {
+            rtc = true;
             break;
         }
     }
-
-    if (tries == POM_READ_MAX_TRIES)
-    {
-        rtc = false;
-    }
+    sum_retries += tries;
+    sum_reads++;
 
     return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * pom_read_cv () - read values of N * 4 CVs
+ *
+ * cv begins with 0!
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+bool
+POM::xpom_read_cv (uint8_t * valuep, uint_fast8_t n, uint_fast16_t addr, uint_fast8_t cv31, uint_fast8_t cv32, uint_fast8_t cv)
+{
+    uint_fast8_t    tries;
+    bool            rtc = false;
+
+    for (tries = 0; tries < XPOM_READ_MAX_TRIES; tries++)
+    {
+        if (DCC::xpom_read_cv (valuep, n, addr, cv31, cv32, cv))
+        {
+            rtc = true;
+            break;
+        }
+    }
+    sum_retries += tries;
+    sum_reads += 4 * n;
+
+    return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * pom_get_read_tries () - get number of read tries
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+uint32_t
+POM::pom_get_read_retries (void)
+{
+    return (sum_retries);
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * pom_get_read_tries () - get number of read tries
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+uint32_t
+POM::pom_get_num_reads (void)
+{
+    return (sum_reads);
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * pom_reset_read_tries () - reset number of read tries
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+POM::pom_reset_num_reads (void)
+{
+    sum_retries = 0;
+    sum_reads = 0;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------

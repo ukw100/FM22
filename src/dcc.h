@@ -50,14 +50,24 @@ typedef struct
 {
     uint16_t    addr;
     uint16_t    cv;
-    uint8_t     cv_value;   
+    uint8_t     cv_value;
     uint8_t     valid;
 } POM_CV;
 
 typedef struct
 {
+    uint16_t    addr;
+    uint8_t     cv31;
+    uint8_t     cv32;
+    uint8_t     cv_range;
+    uint8_t     cv_value[16];           // 4 bytes per block, max 4 blocks possible
+    uint8_t     valid;
+} XPOM_CV;
+
+typedef struct
+{
     uint16_t    cv;
-    uint8_t     cv_value;   
+    uint8_t     cv_value;
     uint8_t     valid;
 } PGM_CV;
 
@@ -65,6 +75,7 @@ class DCC
 {
     public:
         static POM_CV           pom_cv;
+        static XPOM_CV          xpom_cv;
         static PGM_CV           pgm_cv;
         static uint_fast8_t     channel_stopped;
         static uint16_t         adc_value;
@@ -99,6 +110,7 @@ class DCC
         static void             hard_reset_decoder (uint_fast16_t addr);
         static void             pom_write_address (uint_fast16_t oldaddr, uint_fast16_t newaddr);
         static bool             pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv);
+        static bool             xpom_read_cv (uint_fast8_t * valuep, uint_fast8_t n, uint_fast16_t addr, uint_fast8_t cv31, uint_fast8_t cv32, uint_fast8_t cv_range);
         static void             pom_write_cv (uint_fast16_t addr, uint16_t cv, uint_fast8_t value);
         static void             pom_write_cv_bit (uint_fast16_t addr, uint16_t cv, uint_fast8_t bitpos, uint_fast8_t value);
         static void             get_ack (uint_fast16_t addr);

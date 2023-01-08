@@ -34,6 +34,7 @@ class MSG
         static void         loco_rc2_rate (uint8_t * bufp, uint_fast8_t len);
         static void         s88 (uint8_t * bufp, uint_fast8_t len);
         static void         rcl (uint8_t * bufp, uint_fast8_t len);
+        static void         xpom_cv (uint8_t * bufp, uint_fast8_t len);
         static void         debug_message (uint8_t * bufp, uint_fast8_t len);
         static void         msg (uint8_t * buf, uint_fast8_t len);
 };

@@ -36,6 +36,7 @@
 #define MSG_LOCO_RC2_RATE                   0x08
 #define MSG_S88                             0x09
 #define MSG_RCL                             0x0A
+#define MSG_XPOM_CV                         0x0B
 
 #define MSG_DEBUG_MESSAGE                   0x20
 
@@ -170,6 +171,32 @@ MSG::pom_cv (uint8_t * bufp, uint_fast8_t len)
 }
 
 void
+MSG::xpom_cv (uint8_t * bufp, uint_fast8_t len)
+{
+    if (len >= 10)
+    {
+        uint_fast8_t    nvalues = len - 6;
+        uint_fast8_t    i;
+
+        DCC::xpom_cv.addr           = GET16 (bufp, 1);
+        DCC::xpom_cv.cv31           = GET8 (bufp, 3);
+        DCC::xpom_cv.cv32           = GET8 (bufp, 4);
+        DCC::xpom_cv.cv_range       = GET8 (bufp, 5);
+
+        for (i = 0; i < nvalues; i++)
+        {
+            DCC::xpom_cv.cv_value[i]    = GET8(bufp, i + 6);
+        }
+
+        DCC::xpom_cv.valid          = 1;
+    }
+    else
+    {
+         printf ("MSG:xpom_cv: wrong len: %u\n", len);
+    }
+}
+
+void
 MSG::pgm_cv (uint8_t * bufp, uint_fast8_t len)
 {
     if (len == 4)
@@ -245,6 +272,7 @@ MSG::msg (uint8_t * buf, uint_fast8_t len)
         case MSG_LOCO_RC2_RATE:             MSG::loco_rc2_rate (buf, len);                      break;
         case MSG_S88:                       MSG::s88 (buf, len);                                break;
         case MSG_RCL:                       MSG::rcl (buf, len);                                break;
+        case MSG_XPOM_CV:                   MSG::xpom_cv (buf, len);                            break;
         case MSG_DEBUG_MESSAGE:             MSG::debug_message (buf, len);                      break;
 
         default:
