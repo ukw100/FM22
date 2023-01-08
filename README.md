@@ -63,8 +63,6 @@ Das Menü "Steuerung" bietet folgende Punkte:
 
 <img align="right" src="https://github.com/ukw100/FM22/blob/main/images/menu1.png">
 
-Hier geht es zu den entsprechenden Unterkapiteln:
-
 * [Lokliste](#lokliste)
 * [Zusatzdecoder](#zusatzdecoder)
 * [Weichen](#weichen)
