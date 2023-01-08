@@ -5,7 +5,7 @@ This project is still in the process of development. A translation into English 
 
 Dieses Projekt ist noch in der Entstehung. Eine Übersetzung ins Englische wird erfolgen, sobald die Dokumentation vollständig ist.
 
-![DCC-FM22 Lokliste](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok1.png "Lokliste")
+![DCC-FM22 Loksteuerung](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok1.png "Loksteuerung")
 
 ## Funktionen
 
@@ -64,15 +64,78 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 ### Lokliste
 
+Die Lokliste ist wohl die wichtigste Anzeige während des Betriebs. Hier wird angezeigt:
+
+ * ID der Loks
+ * Online-Status (grün=online, sonst offline)
+ * Bezeichnung der Lok
+ * Aktueller Aufenthaltsort der Lok
+ * Buttons "MF" und "MH" zum Ausführen von Makros (hier "Fahrt" und "Halt"
+ * Adresse der Lok
+ * RailCom Channel 2 Übertragungsqualität
+ * Ein Button zum Bearbeiten der Eigenschaften - nur sichtbar im Bearbeitungsmodus
+
 ![DCC-FM22 Lokliste](https://raw.githubusercontent.com/ukw100/FM22/main/images/lokliste.png "Lokliste")
 
-### Lok
+Im obigen Beispiel stehen die Loks mit den Nummern (IDs) 0 bis 8 auf der Anlage - gekenzeichnet durch den Online-Status. Die Loks mit den IDs
+9 - 12 sind zur Zeit offline. Sie wurden zur Veranschaulichung vom Gleis genommen. Sobald eine dieser Loks auf das Gleis gestellt
+wird, ändert sich auch instantan der Online-Status. Dieser wechselt dann auf die Farbe "grün".
+
+Durch die Buttons "MF" und "MH" können automatisiert Abläufe (Macros) gestartet werden, zum Beispiel für "MF" (Macro "Fahrt"):
+
+* Einschalten der Beleuchtung
+* Nach 2 Sekunden Einschalten des Betriebsgeräusches
+* Nach 4 Sekunden Bahnhofsdurchsage
+* Nach 10 Sekunden Schaffnerpfiff
+* Nach 15 Sekunden Fahrtaufnahme 
+* Nach 2 Sekunden Bahnhofsdurchsage
+* Nach 10 Sekunden Abfahrt durch Erhöhung der Geschwindigkeit über eine Rampendefinition.
+
+Diese war nur ein Beispiel. Insgesamt können bis zu 8 Macros pro Lok definiert werden. Weitere Informationen siehe [Lok-Macros](#lok-macros).
+
+Die Spalte "Adresse" gibt die Lokadresse aus. Die Spalte "RC2" zeigt die Übertragungsqualität von RailCom-Rückmeldungen während des Betriebs aus.
+Solange keine Störungen auf der Anlage sind, sollten hier Werte zwischen 98% und 100% ausgegeben werden. Bei 100% wurde jeder DCC-Befehl korrekt
+beantwortet und auch vollständig von der Zentrale "verstanden".
+
+Der Button "Bearbeiten" erscheint nur im Bearbeitungsmodus. Hier können dann die Grundeinstellungen der Lok - wie zum Beispiel die Adresse -
+vorgenommen werden.
+
+Durch Klick auf die Lokbezeichnung gelangt man in die Loksteuerung der gewünschten Lok.
+
+### Loksteuerung
+
+Auf dieser Seite kann die ausgewählte Lok gesteuert werden. Dies ist über Smartphone, Tablett, direkt am Pi oder auch mit einem PC möglich.
+So können direkt mehrere Personen verschiedene Loks gleichzeitig steuern.
+
+Hier sieht man:
+
+* Lokadresse
+* Aufenthaltsort der Lok
+* Aktuelle Geschwindigkeit der Lok
+* Richtung
+* Bezeichnungen und Zustände der Funktionstasten
 
 ![DCC-FM22 Loksteuerung](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok1.png "Loksteuerung")
 
+Im obigen Beispiel wird als Lokadresse 1013, als Aufenthaltsort "Einfahrt Schattenbahhnhof", als Geschwindigkeit "60" und als Richtung "vorwärts"
+ausgegeben. Außerdem ist gerade die Funktion F0 "Spitzensignal / Schlußlicht rot" aktiv.
+
+Alle Ausgaben können sich sofort ändern, wenn eine andere Person oder irgendeine aktiverte Ereignissteuerung in den Ablauf eingreift. Mittels
+Schieberegler kann die Geschwindigkeit und mit den Pfeilen darunter kann die Fahrtrichtung geändert werden. Ein Klick auf das schwarze Quadrat
+stellt die Geschwindigkeit auf 0, ein Klick auf den schwarzen Kreis daneben führt einen Notstopp aus, d.h. die Lok bleit sofort stehen - ohne
+Berücksichtigung eingesteller Bremsverzögerungen.
+
+Insgesamt können 8 Lok-Macros definiert und ausgelöst werden, siehe auch [Lok-Macros](#lok-macros).
+
+### Neue Lok
+
 ![DCC-FM22 Neue Lok](https://raw.githubusercontent.com/ukw100/FM22/main/images/neue-lok.png "Neue Lok")
 
+### Lok bearbeiten
+
 ![DCC-FM22 Lok bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok-bearbeiten.png "Lok bearbeiten")
+
+### Lok-Macros
 
 ![DCC-FM22 Lok Macro MF 1](https://raw.githubusercontent.com/ukw100/FM22/main/images/macro1.png "Lok Macro MF 1")
 
