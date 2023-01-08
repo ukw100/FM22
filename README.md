@@ -59,8 +59,17 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 ## Steuerung
 
+Das Menü "Steuerung" bietet folgende Punkte:
+
 ![DCC-FM22 Menu Steuerung](https://raw.githubusercontent.com/ukw100/FM22/main/images/menu1.png "Menu Steuerung")
 
+* [Lokliste](#lokliste)
+* [Zusatzdecoder](#zusatzdecoder)
+* [Weichen](#weichen)
+* [Fahrstraßen](#fahrstraßen)
+* [Weichentest](#weichentest)
+* [S88-Module](#s88-module)
+* [RailCom®-Module](#railcom-module)
 
 ### Lokliste
 
@@ -75,6 +84,8 @@ Die Lokliste ist wohl die wichtigste Anzeige während des Betriebs. Hier wird an
  * RailCom Channel 2 Übertragungsqualität
  * Ein Button zum Bearbeiten der Eigenschaften - nur sichtbar im Bearbeitungsmodus
 
+Ein Beispiel:
+
 ![DCC-FM22 Lokliste](https://raw.githubusercontent.com/ukw100/FM22/main/images/lokliste.png "Lokliste")
 
 Im obigen Beispiel stehen die Loks mit den Nummern (IDs) 0 bis 8 auf der Anlage - gekenzeichnet durch den Online-Status. Die Loks mit den IDs
@@ -87,18 +98,16 @@ Durch die Buttons "MF" und "MH" können automatisiert Abläufe (Macros) gestarte
 * Nach 2 Sekunden Einschalten des Betriebsgeräusches
 * Nach 4 Sekunden Bahnhofsdurchsage
 * Nach 10 Sekunden Schaffnerpfiff
-* Nach 15 Sekunden Fahrtaufnahme 
-* Nach 2 Sekunden Bahnhofsdurchsage
-* Nach 10 Sekunden Abfahrt durch Erhöhung der Geschwindigkeit über eine Rampendefinition.
+* Nach 15 Sekunden Fahrtaufnahme Erhöhung der Geschwindigkeit über eine Rampendefinition.
 
 Diese war nur ein Beispiel. Insgesamt können bis zu 8 Macros pro Lok definiert werden. Weitere Informationen siehe [Lok-Macros](#lok-macros).
 
-Die Spalte "Adresse" gibt die Lokadresse aus. Die Spalte "RC2" zeigt die Übertragungsqualität von RailCom-Rückmeldungen während des Betriebs aus.
+Die Spalte "Adresse" gibt die Lokadresse aus. Die Spalte "RC2" zeigt die Übertragungsqualität von RailCom-Rückmeldungen während des Betriebs.
 Solange keine Störungen auf der Anlage sind, sollten hier Werte zwischen 98% und 100% ausgegeben werden. Bei 100% wurde jeder DCC-Befehl korrekt
 beantwortet und auch vollständig von der Zentrale "verstanden".
 
 Der Button "Bearbeiten" erscheint nur im Bearbeitungsmodus. Hier können dann die Grundeinstellungen der Lok - wie zum Beispiel die Adresse -
-vorgenommen werden.
+geändert werden.
 
 Durch Klick auf die Lokbezeichnung gelangt man in die Loksteuerung der gewünschten Lok.
 
@@ -120,20 +129,31 @@ Hier sieht man:
 Im obigen Beispiel wird als Lokadresse 1013, als Aufenthaltsort "Einfahrt Schattenbahhnhof", als Geschwindigkeit "60" und als Richtung "vorwärts"
 ausgegeben. Außerdem ist gerade die Funktion F0 "Spitzensignal / Schlußlicht rot" aktiv.
 
-Alle Ausgaben können sich sofort ändern, wenn eine andere Person oder irgendeine aktiverte Ereignissteuerung in den Ablauf eingreift. Mittels
+Alle Ausgaben können sich sofort ändern, wenn eine andere Person oder eine aktivierte Ereignissteuerung in den Ablauf eingreift. Mittels
 Schieberegler kann die Geschwindigkeit und mit den Pfeilen darunter kann die Fahrtrichtung geändert werden. Ein Klick auf das schwarze Quadrat
-stellt die Geschwindigkeit auf 0, ein Klick auf den schwarzen Kreis daneben führt einen Notstopp aus, d.h. die Lok bleit sofort stehen - ohne
-Berücksichtigung eingesteller Bremsverzögerungen.
+stellt die Geschwindigkeit auf 0, ein Klick auf den schwarzen Kreis daneben führt einen Notstopp aus, d.h. die Lok bleibt dann sofort stehen - ohne
+Berücksichtigung irgendwelcher eingesteller Bremsverzögerungen.
 
 Insgesamt können 8 Lok-Macros definiert und ausgelöst werden, siehe auch [Lok-Macros](#lok-macros).
 
 ### Neue Lok
 
+In der Lokliste kann durch Klick auf den Button "Neue Lok" unterhalb der Liste eine neue Lok angelegt werden. Dieser Button erscheint nur
+im Bearbeitungsmodus. Es erscheinen dann direkt unterhalb des Buttons Eingabefelder, mittels derer man die neue Lok anmelden kann:
+
 ![DCC-FM22 Neue Lok](https://raw.githubusercontent.com/ukw100/FM22/main/images/neue-lok.png "Neue Lok")
+
+Im obigen Beispiel wurde als Name "BR111 S-Bahn" gewählt, die Adresse auf 1042 gesetzt und die Fahrstufen mit "128" angegeben.
+Nach Klick auf Speichern erscheint dann die neue Lok in der Lokliste.
 
 ### Lok bearbeiten
 
+Klickt man in der Lokliste auf den Button "Bearbeiten", kann man die Grundeinstellungen wie Name und Adresse ändern:
+
 ![DCC-FM22 Lok bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok-bearbeiten.png "Lok bearbeiten")
+
+Durch Einstellung der ID kann man auch den gewänschten Lokeintrag in der Liste von oben nach unten und umgekehrt "wandern" lassen,
+die Lokliste also neu sortieren.
 
 ### Lok-Macros
 
