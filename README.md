@@ -97,8 +97,7 @@ BOM:
 |28|1|R15|5,1K|METALL 5,10K||
 |29|1|RPI Header|40pol|RPI HEADER 40||
 |30|1|RPI Abstandsbolzen Set|20mm|RPI MOUNTINGKIT2||
-|31|3|IC-Sockel 8-polig||GS 8P||
-|32|1|IC-Sockel 6-polig||GS 6P|Zwei Pole abtrennen|
+|31|4|IC-Sockel 8-polig||GS 8P||Einen Sockel für PC817 halbieren
 
 ## Steuerung
 
