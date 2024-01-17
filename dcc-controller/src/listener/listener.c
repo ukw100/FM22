@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------------------------------------------------------------
  * listener.c - listener routines
  *-------------------------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,9 @@
 #define MSG_FRAME_CONTINUE          0xFB            // Continue transmission
 #define MSG_FRAME_ESCAPE_OFFSET     0xF0            // Escape offset value
 
-#define MSG_ADC                     0x03            // todo: renumber -> 0x01
+// messages coming from FM22 central:
+#define MSG_ALERT                   0x01
+#define MSG_ADC                     0x03            // todo: renumber -> 0x02
 #define MSG_RC1                     0x04
 #define MSG_RC2                     0x05
 #define MSG_POM_CV                  0x06
@@ -123,6 +125,29 @@ listener_send_continue (void)
         listener_putc (MSG_FRAME_CONTINUE);
         listener_do_send_continue = 0;
     }
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------
+ * listener_send_msg_adc () - send booster and ADC status message
+ *-------------------------------------------------------------------------------------------------------------------------------------------
+ */
+void
+listener_send_msg_alert (char * msg)
+{
+    uint8_t     buf[MAX_MSG_SIZE];
+    uint32_t    len;
+
+    len = strlen (msg);
+
+    if (len >= MAX_MSG_SIZE - 1)
+    {
+        len = MAX_MSG_SIZE - 1;
+    }
+
+    buf[0] = MSG_ALERT;
+
+    memcpy (buf + 1, msg, len);
+    send_msg (buf, len + 1);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------------------------
@@ -497,6 +522,7 @@ listener_flush_debug_msg (void)
 #define CMD_BOOSTER_ON                  0x01
 #define CMD_BOOSTER_OFF                 0x02
 #define CMD_SET_MODE                    0x03
+#define CMD_SET_SHORTCUT                0x04
 
 #define CMD_PGM_READ_CV                 0x11
 #define CMD_PGM_WRITE_CV                0x12
@@ -528,6 +554,7 @@ listener_flush_debug_msg (void)
 
 #define CMD_BASE_SWITCH_SET             0x61
 #define CMD_BASE_SWITCH_RESET           0x62
+#define CMD_EXT_ACCESSORY_SET           0x63
 
 #define CMD_S88_SET_N_CONTACTS          0x71
 
@@ -590,6 +617,16 @@ cmd_set_mode (uint8_t * bufp, uint_fast8_t len)
     {
         uint_fast8_t    mode = GET8(bufp, 1);
         dcc_set_mode (mode);
+    }
+}
+
+static void
+cmd_set_shortcut (uint8_t * bufp, uint_fast8_t len)
+{
+    if (len == 3)
+    {
+        uint_fast16_t     shortcut = GET16(bufp, 1);
+        dcc_set_shortcut_value (shortcut);
     }
 }
 
@@ -959,6 +996,17 @@ cmd_base_switch_reset (uint8_t * bufp, uint_fast8_t len)
 }
 
 static void
+cmd_ext_accessory_set (uint8_t * bufp, uint_fast8_t len)
+{
+    if (len == 4)
+    {
+        uint_fast16_t   addr    = GET16(bufp, 1);
+        uint_fast8_t    value   = GET8(bufp, 3);
+        dcc_ext_accessory_set (addr, value);
+    }
+}
+
+static void
 cmd_s88_set_n_contacts (uint8_t * bufp, uint_fast8_t len)
 {
     if (len == 3)
@@ -967,40 +1015,6 @@ cmd_s88_set_n_contacts (uint8_t * bufp, uint_fast8_t len)
         s88_set_n_contacts (ncontacts);
     }
 }
-
-/*-------------------------------------------------------------------------------------------------------------------------------------------
- * cmd_pgm_statistics () - command: PGM_STATISTICS
- *-------------------------------------------------------------------------------------------------------------------------------------------
- */
-#if 0 // TODO
-static void
-cmd_pgm_statistics (uint8_t * bufp, uint_fast8_t len)
-{
-    uint8_t     buf[15];
-
-    buf[0] = *bufp;
-
-    if (len == 1)
-    {
-        buf[1]  = dcc_pgm_limit >> 8;
-        buf[2]  = dcc_pgm_limit & 0xFF;
-        buf[3]  = dcc_pgm_min_lower_value >> 8;
-        buf[4]  = dcc_pgm_min_lower_value & 0xFF;
-        buf[5]  = dcc_pgm_max_lower_value >> 8;
-        buf[6]  = dcc_pgm_max_lower_value & 0xFF;
-        buf[7]  = dcc_pgm_min_upper_value >> 8;
-        buf[8]  = dcc_pgm_min_upper_value & 0xFF;
-        buf[9]  = dcc_pgm_max_upper_value >> 8;
-        buf[10] = dcc_pgm_max_upper_value & 0xFF;
-        buf[11] = dcc_pgm_min_cnt >> 8;
-        buf[12] = dcc_pgm_min_cnt & 0xFF;
-        buf[13] = dcc_pgm_max_cnt >> 8;
-        buf[14] = dcc_pgm_max_cnt & 0xFF;
-
-        cmd_answer_ack (buf, 15);
-    }
-}
-#endif
 
 #define DEFAULT_TIMEOUT     1000
 #define PGM_TIMEOUT         3000
@@ -1020,6 +1034,7 @@ cmd (uint8_t * buf, uint_fast8_t len)
         case CMD_BOOSTER_ON:                cmd_booster_on (buf, len);                                  break;
         case CMD_BOOSTER_OFF:               cmd_booster_off (buf, len);                                 break;
         case CMD_SET_MODE:                  cmd_set_mode (buf, len);                                    break;
+        case CMD_SET_SHORTCUT:              cmd_set_shortcut (buf, len);                                break;
 
         case CMD_PGM_READ_CV:               cmd_pgm_read_cv (buf, len);         timeout = PGM_TIMEOUT;  break;
         case CMD_PGM_WRITE_CV:              cmd_pgm_write_cv (buf, len);        timeout = PGM_TIMEOUT;  break;
@@ -1051,6 +1066,7 @@ cmd (uint8_t * buf, uint_fast8_t len)
 
         case CMD_BASE_SWITCH_SET:           cmd_base_switch_set (buf, len);                             break;
         case CMD_BASE_SWITCH_RESET:         cmd_base_switch_reset (buf, len);                           break;
+        case CMD_EXT_ACCESSORY_SET:         cmd_ext_accessory_set (buf, len);                           break;
 
         case CMD_S88_SET_N_CONTACTS:        cmd_s88_set_n_contacts (buf, len);                          break;
     }
@@ -1143,16 +1159,15 @@ listener_read_cmd (void)
  * listener_read_rcl () - read from local RC-Detector
  *-------------------------------------------------------------------------------------------------------------------------------------------
  */
-uint_fast8_t
+uint8_t *
 listener_read_rcl (void)
 {
-    static uint8_t          buf[8];
+    static uint8_t          buf[MAX_RCL_MSG_LEN];
     static uint_fast8_t     bufidx = 0;
-    static uint_fast8_t     length = 0;
     static uint_fast8_t     cmd_state = CMD_STATE_WAIT_FOR_FRAME_START;
     static uint_fast8_t     escape = 0;
     uint_fast8_t            ch;
-    uint_fast8_t            rtc = 0;
+    uint8_t *               rtc = (uint8_t *) 0;
 
     while (rs485_poll (&ch))
     {
@@ -1165,7 +1180,6 @@ listener_read_rcl (void)
                 cmd_state   = CMD_STATE_WAIT_FOR_FRAME_END;
                 bufidx      = 0;
                 escape      = 0;
-                length      = 3;
             }
             else
             {
@@ -1186,22 +1200,15 @@ listener_read_rcl (void)
                     escape = 0;
                 }
 
-                if (length)
+                if (ch == CMD_FRAME_END)
+                {
+                    rtc = buf;
+                    cmd_state = CMD_STATE_WAIT_FOR_FRAME_START;
+                    break;
+                }
+                else if (bufidx < MAX_RCL_MSG_LEN - 1)
                 {
                     buf[bufidx++] = ch;
-                    length--;
-                }
-                else
-                {
-                    if (ch == CMD_FRAME_END)
-                    {
-                        uint_fast8_t    channel_idx = buf[0];
-                        uint_fast16_t   addr        = (buf[1] << 8) | buf[2];
-                        rc_detector_set_loco_location (addr, channel_idx);
-                        rtc = 1;
-                    }
-
-                    cmd_state = CMD_STATE_WAIT_FOR_FRAME_START;
                 }
             }
         }

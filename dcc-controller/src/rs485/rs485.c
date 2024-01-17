@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * rs485.c - RS485 routines for STM32F4XX or STM32F10X
  *---------------------------------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2015-2022 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2015-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

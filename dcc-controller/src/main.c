@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------------------------------------------------------------
- * main.c - main module of dcc-central
+ * main.c - main module of dcc controler
  *-------------------------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,9 @@
  *    | Runmode                 | BOOT0=0       BOOT1=X     |                                                   |
  *    | Listener LED            | ----          ----        |                                                   |
  *    +-------------------------+---------------------------+---------------------------------------------------+
+ *    | PGM                     |                           |                                                   |
+ *    | ACK_PGM                 | GPIO          PB10        | INPUT: PGM ACK                                    |
+ *    +-------------------------+---------------------------+---------------------------------------------------+
  *    | RailCom Local           |                           |                                                   |
  *    | RailCom DE              | GPIO          PA1         | RS485 DE                                          |
  *    | RailCom TX              | USART2_TX     PA2         | RS485 DI not used                                 |
@@ -52,6 +55,7 @@
  *    | Booster R_PWM           | GPIO          PA5         |                                                   |
  *    | Booster ENABLE          | GPIO          PA6         |                                                   |
  *    | Booster CT              | GPIO          PA7         | ADC                                               |
+ *    | Booster VT              | GPIO          PB0         | ADC                                               |
  *    | Booster LED             | GPIO          PC13        | LED 401 Black Pill                                |
  *    +-------------------------+---------------------------+---------------------------------------------------+
  *    | S88                     |                           |                                                   |
@@ -60,18 +64,15 @@
  *    | S88 RESET               | GPIO          PB5         | S88 RESET output                                  |
  *    | S88 DATA                | GPIO          PB6         | S88 DATA input                                    |
  *    +-------------------------+---------------------------+---------------------------------------------------+
- *    | AUX1                    | GPIO          PA8         | Reserved for later use                            |
- *    | AUX2                    | GPIO          PB15        |                                                   |
- *    | AUX3                    | GPIO          PB14        |                                                   |
- *    | AUX4                    | GPIO          PB13        |                                                   |
- *    | AUX5                    | GPIO          PB12        |                                                   |
- *    | AUX6                    | GPIO          PB0         |                                                   |
- *    | AUX7                    | GPIO          PB1         |                                                   |
- *    | AUX8                    | GPIO          PB2         |                                                   |
- *    | AUX9                    | GPIO          PB10        |                                                   |
- *    +-------------------------+---------------------------+---------------------------------------------------+
  *    | FREE                    | GPIO          PA0         |                                                   |
+ *    | FREE                    | GPIO          PA8         |                                                   |
+ *    | FREE                    | GPIO          PB1         |                                                   |
+ *    | FREE                    | GPIO          PB2         |                                                   |
  *    | FREE                    | GPIO          PB7         |                                                   |
+ *    | FREE                    | GPIO          PB12        |                                                   |
+ *    | FREE                    | GPIO          PB13        |                                                   |
+ *    | FREE                    | GPIO          PB14        |                                                   |
+ *    | FREE                    | GPIO          PB15        |                                                   |
  *    | FREE                    | GPIO          PC14        |                                                   |
  *    | FREE                    | GPIO          PC15        |                                                   |
  *    +-------------------------+---------------------------+---------------------------------------------------+
@@ -82,6 +83,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "adc1-dma.h"
 #include "dcc.h"
 #include "s88.h"
 #include "booster.h"
@@ -95,19 +97,10 @@
  * Definitions
  *-------------------------------------------------------------------------------------------------------------------------------------------
  */
-#define ADC_AVERAGE_8                       8                           // for shortcut detection
-#define ADC_AVERAGE_N                       128                         // for display
-#define SHORTCUT_ADC_VALUE                  3000                        // indicate shortcut if adc value > 3000
+#define ADC_AVERAGE_N                       256                         // average of N adc values, should be a power of 2
 
-/*-------------------------------------------------------------------------------------------------------------------------------------------
- * Public global variables
- *-------------------------------------------------------------------------------------------------------------------------------------------
- */
-static uint_fast16_t        adc_average_8   = 0;
-static uint_fast16_t        adc_average_n   = 0;
-
-#define ADC_STATUS_PERIOD                   10                          // measure ADC status every 10 msec
-#define ADC_STATUS_CNT                      10                          // but send ADC status every 10 * 10 msec
+#define ADC_STATUS_PERIOD                   1                           // measure ADC status every 1 msec
+#define ADC_STATUS_CNT                      200                         // but send ADC status every 200 * 1 msec = 200 msec
 
 #define RC1_STATUS_PERIOD                   100                         // send RC1 status every 40 msec
 #define RC2_STATUS_PERIOD                   100                         // send RC2 status every 100 msec
@@ -122,16 +115,14 @@ static uint_fast16_t        adc_average_n   = 0;
 int
 main ()
 {
-    uint16_t        adc_values_8[ADC_AVERAGE_8] = { 0 };
-    uint16_t        adc_values_n[ADC_AVERAGE_N] = { 0 };
-    uint_fast8_t    do_start_single_conversion  = 1;
-    uint_fast8_t    adc_value_idx_8             = 0;
-    uint_fast8_t    adc_value_idx_n             = 0;
-    uint_fast32_t   adc_sum_8                   = 0;
-    uint_fast32_t   adc_sum_n                   = 0;
+    static uint16_t adc_values[ADC_AVERAGE_N];
+    uint_fast16_t   adc_average                 = 0;
+    uint_fast8_t    adc_value_idx               = 0;
+    uint_fast32_t   adc_sum                     = 0;
     uint16_t        adc_value                   = 0;
-    uint32_t        current_millis;
     uint32_t        next_adc;
+    uint8_t *       rcl_msg;
+    uint32_t        current_millis;
     uint32_t        next_rc1_status;
     uint32_t        next_rc2_status;
     uint32_t        next_s88_status;
@@ -154,6 +145,7 @@ main ()
     listener_msg_init ();
     rc_detector_init ();
     rc_local_init ();
+    adc1_dma_init ();
 
     current_millis      = millis;
     next_adc            = current_millis + ADC_STATUS_PERIOD;
@@ -170,15 +162,31 @@ main ()
     while (1)
     {
         current_millis = millis;
-
+        dcc_reset_last_active_switch ();
         listener_send_continue ();
-        listener_read_rcl ();
 
-        if (do_start_single_conversion && next_adc <= current_millis)
+        rcl_msg = listener_read_rcl ();
+
+        if (rcl_msg)
         {
-            booster_adc_start_single_conversion ();
-            do_start_single_conversion = 0;
-            next_adc = current_millis + ADC_STATUS_PERIOD;
+            switch (rcl_msg[0])
+            {
+                case MSG_RCL_RC2:
+                {
+                    uint_fast8_t    channel_idx = rcl_msg[1];
+                    uint_fast16_t   addr        = (rcl_msg[2] << 8) | rcl_msg[3];
+                    rc_detector_set_loco_location (addr, channel_idx);
+                    break;
+                }
+#if 0 // later
+                case MSG_RCL_ACK:
+                {
+                    uint_fast16_t   addr        = (rcl_msg[1] << 8) | rcl_msg[2];
+                    rc_detector_set_loco_location (addr, channel_idx);
+                    break;
+                }
+#endif
+            }
         }
 
         if (next_rc1_status <= current_millis)
@@ -233,51 +241,53 @@ main ()
             }
         }
 
-        if (! do_start_single_conversion && booster_adc_poll_conversion_value (&adc_value))
+        if (next_adc <= current_millis)
         {
             static uint32_t status_cnt = 0;
+
+            next_adc = current_millis + ADC_STATUS_PERIOD;
             status_cnt++;
 
-            adc_sum_8 -= adc_values_8[adc_value_idx_8];
-            adc_sum_8 += adc_value;
+            adc_value = adc1_dma_buffer[0];
+            adc_sum -= adc_values[adc_value_idx];
+            adc_sum += adc_value;
 
-            adc_sum_n -= adc_values_n[adc_value_idx_n];
-            adc_sum_n += adc_value;
+            adc_values[adc_value_idx] = adc_value;
 
-            adc_values_8[adc_value_idx_8] = adc_value;
-            adc_values_n[adc_value_idx_n] = adc_value;
+            adc_value_idx++;
 
-            adc_value_idx_8++;
-
-            if (adc_value_idx_8 == ADC_AVERAGE_8)
+            if (adc_value_idx == ADC_AVERAGE_N)
             {
-                adc_value_idx_8 = 0;
+                adc_value_idx = 0;
             }
 
-            adc_value_idx_n++;
+#if 0
+            static uint16_t max_adc_value;
 
-            if (adc_value_idx_n == ADC_AVERAGE_N)
+            if (adc_value > max_adc_value)
             {
-                adc_value_idx_n = 0;
+                listener_send_debug_msgf ("max:%d\n", max_adc_value);
+                max_adc_value = adc_value;
             }
+#endif
 
-            adc_average_8 = adc_sum_8 / ADC_AVERAGE_8;
+            adc_average = adc_sum / ADC_AVERAGE_N;
 
-            if (adc_average_8 > SHORTCUT_ADC_VALUE)
+            if (adc_average > dcc_shortcut_value)
             {
+                char b[64];
                 booster_off ();
-                listener_send_msg_adc (adc_average_8);
-                listener_send_debug_msgf ("shortcut - booster off: adc:%d", adc_average_8);
+                // listener_send_msg_adc (adc_average);
+                sprintf (b, "Kurzschluss! ADC: %d", adc_average);
+                listener_send_msg_alert (b);
             }
 
             if (status_cnt >= ADC_STATUS_CNT)
             {
-                adc_average_n = adc_sum_n / ADC_AVERAGE_N;
-                listener_send_msg_adc (adc_average_n);
+                // listener_send_debug_msgf ("adc:%d", adc_average_8);
+                listener_send_msg_adc (adc_average);
                 status_cnt = 0;
             }
-
-            do_start_single_conversion = 1;
         }
 
         listener_flush_debug_msg ();

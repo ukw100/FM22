@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * booster.h - handle booster
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,6 @@
 #include <stdint.h>
 
 extern volatile uint_fast8_t        booster_is_on;
-
-extern void                         booster_adc_start_single_conversion (void);
-extern uint_fast8_t                 booster_adc_poll_conversion_value (uint16_t * value_p);
 
 extern void                         booster_negative (void);
 extern void                         booster_positive (void);

@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * dcc.h - DCC encoder
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,13 +49,7 @@
 extern volatile uint32_t            millis;
 extern volatile uint_fast8_t        debuglevel;
 
-extern uint16_t         dcc_pgm_min_lower_value;
-extern uint16_t         dcc_pgm_max_lower_value;
-extern uint16_t         dcc_pgm_min_upper_value;
-extern uint16_t         dcc_pgm_max_upper_value;
-extern uint16_t         dcc_pgm_min_cnt;
-extern uint16_t         dcc_pgm_max_cnt;
-extern uint16_t         dcc_pgm_limit;
+extern uint_fast16_t                dcc_shortcut_value;
 
 /*------------------------------------------------------------------------------------------------------------------------
  * Commands:
@@ -84,8 +78,11 @@ extern uint_fast8_t     dcc_xpom_read_cv (uint8_t * valuep, uint_fast8_t n, uint
 extern void             dcc_xpom_write_cv (uint_fast16_t addr, uint_fast8_t cv31, uint_fast8_t cv32, uint_fast8_t cv, uint8_t * ptr, uint_fast8_t len);
 extern void             dcc_track_search (void);
 extern void             dcc_get_ack (uint_fast16_t addr);
+extern void             dcc_reset_last_active_switch (void);
 extern void             dcc_base_switch_set (uint_fast16_t addr, uint_fast8_t nswitch);
 extern void             dcc_base_switch_reset (uint_fast16_t addr, uint_fast8_t nswitch);
+extern void             dcc_ext_accessory_set (uint_fast16_t addr, uint_fast8_t value);
 extern void             dcc_booster_on (void);
 extern void             dcc_booster_off (void);
+extern void             dcc_set_shortcut_value (uint_fast16_t value);
 extern void             dcc_init (void);

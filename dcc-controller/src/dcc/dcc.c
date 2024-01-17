@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * dcc.c - DCC encoder
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -252,9 +252,13 @@
 #include "listener.h"
 #include "dcc.h"
 #include "booster.h"
+#include "adc1-dma.h"
 #include "delay.h"
 #include "s88.h"
+#include "io.h"
 #include "rc-detector.h"
+
+#define SHORTCUT_DEFAULT                1000                                // default shortcut value
 
 #define PREAMBLE_LEN_RAILCOM            16                                  // length of PREAMBLE if railcom mode
 #define PREAMBLE_LEN_NO_RAILCOM         12                                  // length of PREAMBLE if no railcom mode, 12 should be enough
@@ -266,6 +270,7 @@ static volatile uint_fast8_t            dcc_mode                = RAILCOM_MODE;
 static volatile uint_fast8_t            preamble_len            = PREAMBLE_LEN_RAILCOM;
 static volatile uint_fast8_t            do_switch_booster_on    = 0;
 
+uint_fast16_t                           dcc_shortcut_value      = SHORTCUT_DEFAULT;
 volatile uint32_t                       millis                  = 0;                // volatile: used in ISR
 volatile uint_fast8_t                   debuglevel              = 0;                // volatile: used in ISR
 
@@ -331,7 +336,7 @@ timer2_init (void)
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------------------------
- * Timer3 IRQ handler - called every 58 usec
+ * Timer3 IRQ handler - called every 29 usec
  *
  * Parameter        Name    Min     Max
  * --------------------------------------
@@ -532,10 +537,10 @@ TIM2_IRQHandler (void)
                                 buf[0]      = 0xFF;
                                 buf[1]      = 0x00;
                                 buf[2]      = 0xFF;
-                                loco_idx    = 0xFFFF;                               // reset loco index
                                 buflen      = 3;
                             }
 
+                            flags           = 0;                                    // reset flags
                             loco_idx        = 0xFFFF;                               // reset loco index
                         }
 
@@ -800,55 +805,134 @@ dcc_set_mode (uint_fast8_t newmode)
     dcc_mode = newmode;
 }
 
-uint16_t        dcc_pgm_min_lower_value = 9999;
-uint16_t        dcc_pgm_max_lower_value = 0;
-uint16_t        dcc_pgm_min_upper_value = 9999;
-uint16_t        dcc_pgm_max_upper_value = 0;
-uint16_t        dcc_pgm_min_cnt         = 9999;
-uint16_t        dcc_pgm_max_cnt         = 0;
-uint16_t        dcc_pgm_limit;
-
+#define PGM_RESET_PACKETS       25                                      // number of reset packets, should be min. 25
+#define PGM_REPEAT_PACKETS       5                                      // number of repeat packets, should be 5
 #define PGM_WRITE_DURATION      100                                     // 100msec
 #define PGM_READ_DURATION       80                                      // 80msec - normally 50msec should be enough
-#define PGM_MIN_CYCLE_CNT       5                                       // 5 cycles (== 0.5 msec) needed to detect an answer, normally 1msec should be enough
+#define PGM_MIN_CYCLE_CNT       40                                      // 40 cycles (== 4 msec) needed to detect a positive answer
+
+#define PGM_METHOD_ADC          1                                       // method: ADC (CT pin of booster)
+#define PGM_METHOD_RCL          2                                       // method: RCL (RCL message)
+#define PGM_METHOD_ACK          3                                       // method: ACK (pin ACK_PGM pin of ACK detector), default
+
+#define PGM_METHOD              PGM_METHOD_ACK
+
+#if PGM_METHOD == PGM_METHOD_ACK
+
+#define PGM_PERIPH_CLOCK_CMD        RCC_AHB1PeriphClockCmd
+#define PGM_PERIPH                  RCC_AHB1Periph_GPIOB
+#define PGM_PORT                    GPIOB
+#define PGM_ACK_PIN                 GPIO_Pin_10     // PB10
 
 static uint_fast8_t
 dcc_pgm_cmd (uint8_t * buf, uint_fast8_t buflen, uint_fast8_t is_write_command)
 {
-    uint_fast8_t    cnt = 0;
+    uint_fast8_t    ack = 0;
+    uint32_t        next_millis;
+    uint32_t        ack_cnt = 0;
+    uint32_t        no_ack_cnt = 0;
+    uint_fast8_t    r;
+
+    for (r = 0; r < PGM_REPEAT_PACKETS; r++)
+    {
+        send_packet (0xFFFF, 0xFFFF, buf, buflen);
+    }
+
+    if (is_write_command)
+    {
+        next_millis = millis + PGM_WRITE_DURATION;          // 100msec
+    }
+    else
+    {
+        next_millis = millis + PGM_READ_DURATION;           // 80msec
+    }
+
+    while (millis < next_millis)
+    {
+        uint8_t * rcl_msg = listener_read_rcl ();
+
+        if (rcl_msg && rcl_msg[0] == MSG_RCL_PGM_ACK)       // FM22 RC-Detector sends ACK via RS485
+        {
+            ack_cnt = PGM_MIN_CYCLE_CNT;
+            break;
+        }
+
+        if (GPIO_GET_BIT(PGM_PORT, PGM_ACK_PIN) == 0)
+        {
+            ack_cnt++;
+            no_ack_cnt = 0;
+        }
+        else
+        {
+            no_ack_cnt++;
+
+            if (ack_cnt >= PGM_MIN_CYCLE_CNT && no_ack_cnt >= 5)    // got ack, then nevermore
+            {                                                       // we can break here
+                break;
+            }
+        }
+        delay_usec (100);
+    }
+
+    char b[128];
+    sprintf (b, "ack_cnt: %lu, no_ack_cnt: %lu, rest: %lu", ack_cnt, no_ack_cnt, next_millis - millis);
+    listener_send_debug_msg (b);
+
+    if (ack_cnt >= PGM_MIN_CYCLE_CNT)                               // minimum is 4 msec
+    {
+        ack = 1;
+    }
+
+    return ack;
+}
+
+#elif PGM_METHOD == PGM_METHOD_ADC
+
+#define SHOW_VALUES             0                                   // 1: show values, only for debug
+
+static uint_fast8_t
+dcc_pgm_cmd (uint8_t * buf, uint_fast8_t buflen, uint_fast8_t is_write_command)
+{
+    uint16_t        dcc_pgm_min_lower_value = 9999;
+    uint16_t        dcc_pgm_max_lower_value = 0;
+    uint16_t        dcc_pgm_min_upper_value = 9999;
+    uint16_t        dcc_pgm_max_upper_value = 0;
+    uint16_t        dcc_pgm_min_cnt         = 9999;
+    uint16_t        dcc_pgm_max_cnt         = 0;
+    uint16_t        dcc_pgm_limit;
     uint16_t        value;
     uint_fast16_t   m;
-    uint_fast16_t   duration;
-    uint_fast8_t    rtc = 0;
+    uint_fast8_t    r;
+    uint_fast8_t    ack = 0;
     uint32_t        sum = 0;
-
-    dcc_pgm_min_lower_value = 9999;
-    dcc_pgm_max_lower_value = 0;
-    dcc_pgm_min_upper_value = 9999;
-    dcc_pgm_max_upper_value = 0;
-    dcc_pgm_min_cnt = 9999;
-    dcc_pgm_max_cnt = 0;
+    uint_fast16_t   duration;
+    uint_fast8_t    cntl = 0;
+    uint_fast8_t    cnth = 0;
 
     for (m = 0; m < 8; m++)
     {
-        booster_adc_start_single_conversion ();
-
-        while (! booster_adc_poll_conversion_value (&value))
-        {
-            ;
-        }
+        value = adc1_dma_buffer[0];
+        delay_usec (100);
         sum += value;
     }
 
     value = sum / 8;
 
-    dcc_pgm_limit = 3 * value + 20;
+    dcc_pgm_limit = 2 * value;
 
-    send_packet (0xFFFF, 0xFFFF, buf, buflen);
-    send_packet (0xFFFF, 0xFFFF, buf, buflen);
-    send_packet (0xFFFF, 0xFFFF, buf, buflen);
-    send_packet (0xFFFF, 0xFFFF, buf, buflen);
-    send_packet (0xFFFF, 0xFFFF, buf, buflen);
+#if SHOW_VALUES == 1
+    static uint16_t values[1000];
+
+    for (m = 0; m < 1000; m++)
+    {
+        values[m] = 0;
+    }
+#endif
+
+    for (r = 0; r < PGM_REPEAT_PACKETS; r++)
+    {
+        send_packet (0xFFFF, 0xFFFF, buf, buflen);
+    }
 
     if (is_write_command)
     {
@@ -861,64 +945,128 @@ dcc_pgm_cmd (uint8_t * buf, uint_fast8_t buflen, uint_fast8_t is_write_command)
 
     for (m = 0; m < duration; m++)
     {
-        booster_adc_start_single_conversion ();
-        delay_usec (100);
+        value = adc1_dma_buffer[0];
 
-        while (booster_adc_poll_conversion_value (&value))
+#if SHOW_VALUES == 1
+if (dcc_buflen == 0) { dcc_reset (); }
+
+        if (m < 1000)
         {
-            if (value > dcc_pgm_limit)
-            {
-                if (value < dcc_pgm_min_upper_value)
-                {
-                    dcc_pgm_min_upper_value = value;
-                }
+            values[m] = value;
+        }
+#endif
 
-                if (value > dcc_pgm_max_upper_value)
-                {
-                    dcc_pgm_max_upper_value = value;
-                }
-            }
-            else
+        if (value > dcc_pgm_limit)
+        {
+            if (value < dcc_pgm_min_upper_value)
             {
-                if (value < dcc_pgm_min_lower_value)
-                {
-                    dcc_pgm_min_lower_value = value;
-                }
-
-                if (value > dcc_pgm_max_lower_value)
-                {
-                    dcc_pgm_max_lower_value = value;
-                }
+                dcc_pgm_min_upper_value = value;
             }
 
-            if (value > dcc_pgm_limit)
+            if (value > dcc_pgm_max_upper_value)
             {
-                cnt++;
+                dcc_pgm_max_upper_value = value;
             }
         }
+        else
+        {
+            if (value < dcc_pgm_min_lower_value)
+            {
+                dcc_pgm_min_lower_value = value;
+            }
+
+            if (value > dcc_pgm_max_lower_value)
+            {
+                dcc_pgm_max_lower_value = value;
+            }
+        }
+
+        if (value > dcc_pgm_limit)
+        {
+            cnth++;
+        }
+        else
+        {
+            cntl++;
+        }
+
+        delay_usec (100);
     }
 
-    if (cnt > dcc_pgm_max_cnt)
+    if (cnth > dcc_pgm_max_cnt)
     {
-        dcc_pgm_max_cnt = cnt;
+        dcc_pgm_max_cnt = cnth;
     }
 
-    if (cnt >= PGM_MIN_CYCLE_CNT && cnt < dcc_pgm_min_cnt)              // >= 0.5 msec
+    if (cnth >= PGM_MIN_CYCLE_CNT && cnth < dcc_pgm_min_cnt)        // >= 4 msec
     {
-        dcc_pgm_min_cnt = cnt;
+        dcc_pgm_min_cnt = cnth;
     }
 
-    if (cnt >= PGM_MIN_CYCLE_CNT)                                   // >= 0.5msec
+    char b[128];
+    sprintf (b, "lim=%u cntl=%u cnth=%u minp=%u maxp=%u maxu=%u maxl=%u", dcc_pgm_limit, cntl, cnth, dcc_pgm_min_cnt, dcc_pgm_max_cnt, dcc_pgm_max_upper_value, dcc_pgm_max_lower_value);
+    listener_send_debug_msg (b);
+
+#if SHOW_VALUES == 1
+    for (m = 0; m < 1000; m++)
     {
-        rtc = 1;
+        sprintf (b, "%u", values[m]);
+        listener_send_debug_msg (b);
+    }
+#endif
+
+    if (cnth >= PGM_MIN_CYCLE_CNT)                                  // >= 4 msec
+    {
+        ack = 1;
     }
     else
     {
-        rtc = 0;
+        ack = 0;
     }
 
-    return rtc;
+    return ack;
 }
+
+#elif PGM_METHOD == PGM_METHOD_RCL
+
+static uint_fast8_t
+dcc_pgm_cmd (uint8_t * buf, uint_fast8_t buflen, uint_fast8_t is_write_command)
+{
+    uint_fast8_t    ack = 0;
+    uint32_t        next_millis;
+    uint_fast8_t    r;
+
+    for (r = 0; r < PGM_REPEAT_PACKETS; r++)
+    {
+        send_packet (0xFFFF, 0xFFFF, buf, buflen);
+    }
+
+    if (is_write_command)
+    {
+        next_millis = millis + PGM_WRITE_DURATION;          // 100msec
+    }
+    else
+    {
+        next_millis = millis + PGM_READ_DURATION;           // 80msec
+    }
+
+    while (millis < next_millis)
+    {
+        uint8_t * rcl_msg = listener_read_rcl ();
+
+        if (rcl_msg && rcl_msg[0] == MSG_RCL_PGM_ACK)       // important: read all messages, may be more than one!
+        {
+            ack = 1;                                        // don't break here!
+            // char b[128];
+            // sprintf (b, "ack: %d", ack);
+            // listener_send_debug_msg (b);
+        }
+    }
+
+    return ack;
+}
+
+#endif
 
 /*------------------------------------------------------------------------------------------------------------------------
  * dcc_pgm_read_cv () - read CV in programming mode
@@ -951,7 +1099,7 @@ dcc_pgm_read_cv (uint_fast8_t * cv_valuep, uint_fast16_t cv)
 
     dcc_set_mode (PROGRAMMING_MODE);
 
-    for (idx = 0; idx < 25; idx++)
+    for (idx = 0; idx < PGM_RESET_PACKETS; idx++)
     {
         dcc_reset ();
     }
@@ -971,6 +1119,9 @@ dcc_pgm_read_cv (uint_fast8_t * cv_valuep, uint_fast16_t cv)
     }
 
     // printf ("cv = %d, value = %d (0x%02X)\r\n", cv + 1, cv_value, cv_value);
+    char b[128];
+    sprintf (b, "cv = %d, value = %d (0x%02X)", cv + 1, cv_value, cv_value);
+    listener_send_debug_msg (b);
 
     // check complete byte:
 
@@ -980,13 +1131,13 @@ dcc_pgm_read_cv (uint_fast8_t * cv_valuep, uint_fast16_t cv)
 
     if (dcc_pgm_cmd (buf, 3, 0))
     {
-        // printf ("check successful!\r\n");
+        listener_send_debug_msg ("check successful\r\n");
         *cv_valuep = cv_value;
         rtc = 1;
     }
     else
     {
-        // printf ("check failed\r\n");
+        listener_send_debug_msg ("check failed\r\n");
         *cv_valuep = 0;
         rtc = 0;
     }
@@ -1017,7 +1168,7 @@ dcc_pgm_write_cv (uint_fast16_t cv, uint_fast8_t cv_value)
 
     dcc_set_mode (PROGRAMMING_MODE);
 
-    for (idx = 0; idx < 25; idx++)
+    for (idx = 0; idx < PGM_RESET_PACKETS; idx++)
     {
         dcc_reset ();
     }
@@ -1086,7 +1237,7 @@ dcc_pgm_write_cv_bit (uint_fast16_t cv, uint_fast8_t bitpos, uint_fast8_t bitval
 
     dcc_set_mode (PROGRAMMING_MODE);
 
-    for (idx = 0; idx < 25; idx++)
+    for (idx = 0; idx < PGM_RESET_PACKETS; idx++)
     {
         dcc_reset ();
     }
@@ -1515,6 +1666,7 @@ dcc_pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv)
     uint_fast16_t   idx;
     uint_fast16_t   cnt = 0;
     uint32_t        stop_millis;
+    uint8_t *       rcl_msg;
     uint_fast8_t    rtc = 0;
 
     if (booster_is_on)
@@ -1553,6 +1705,11 @@ dcc_pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv)
             {
                 *valuep = rc2_cv_value;
                 rc2_cv_value_valid = 0;                     // flush CV value!
+                rtc = 1;
+            }
+            else if ((rcl_msg = listener_read_rcl ()) != (uint8_t *) 0 && rcl_msg[0] == MSG_RCL_POM_CV)
+            {
+                *valuep = rcl_msg[1];
                 rtc = 1;
             }
             else
@@ -1655,7 +1812,7 @@ dcc_pom_write_cv_bit (uint_fast16_t addr, uint16_t cv, uint_fast8_t bitpos, uint
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- * dcc_xpom_read_cv () - read up to 4 values of CVs
+ * dcc_xpom_read_cv () - read up to n * 4 values of CVs
  *
  * Group: CV access (RCN-212 2.1)
  *  111x-xxxx
@@ -1669,6 +1826,10 @@ dcc_pom_write_cv_bit (uint_fast16_t addr, uint16_t cv, uint_fast8_t bitpos, uint
  * 1st VVVV-VVVV similar to value of CV 31
  * 2nd VVVV-VVVV similar to value of CV 32
  * 3rd VVVV-VVVV 8-bit value CV
+ *
+ * parameters:
+ *   n may be 1..4 for 4, 8, 12, or 16 cv values
+ *   cv must be a multiple of 4 beginning with 0
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
@@ -1836,6 +1997,29 @@ dcc_get_ack (uint_fast16_t addr)
     send_packet (0xFFFF, addr, buf, 1);
 }
 
+typedef struct
+{
+    uint32_t    millis;
+    uint16_t    addr;
+    uint8_t     nswitch;
+} DCC_SWITCH_RESET;
+
+static DCC_SWITCH_RESET     dcc_switch_reset;
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * dcc_reset_last_active_switch () - reset last active switch
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+dcc_reset_last_active_switch (void)
+{
+    if (dcc_switch_reset.millis != 0 && millis >= dcc_switch_reset.millis)
+    {
+        dcc_base_switch_reset (dcc_switch_reset.addr, dcc_switch_reset.nswitch);
+        dcc_switch_reset.millis = 0;
+    }
+}
+
 /*------------------------------------------------------------------------------------------------------------------------
  * dcc_base_switch_set () - activate rail switch (base accessory decoder)
  *
@@ -1855,14 +2039,24 @@ dcc_get_ack (uint_fast16_t addr)
 void
 dcc_base_switch_set (uint_fast16_t addr, uint_fast8_t nswitch)
 {
+    uint_fast16_t swaddr;
+    uint_fast16_t swstate;
+
     if (nswitch == DCC_SWITCH_STATE_BRANCH2)    // BRANCH-2 for 3way switch
     {                                           // use following address
-        addr += 4;                              // 1st address = xx00-0001 x111-x00x
-        nswitch = DCC_SWITCH_STATE_BRANCH;
+        swaddr = addr + 4;                      // 1st address = xx00-0001 x111-x00x
+        swstate = DCC_SWITCH_STATE_BRANCH;
     }
     else
     {
-        addr += 3;                              // 1st address = xx00-0001 x111-x00x
+        swaddr = addr + 3;                      // 1st address = xx00-0001 x111-x00x
+        swstate = nswitch;
+    }
+
+    if (dcc_switch_reset.millis)                // should never be, but be sure...
+    {
+        dcc_base_switch_reset (dcc_switch_reset.addr, dcc_switch_reset.nswitch);
+        dcc_switch_reset.millis = 0;
     }
 
     while (dcc_buflen != 0)
@@ -1870,12 +2064,16 @@ dcc_base_switch_set (uint_fast16_t addr, uint_fast8_t nswitch)
         ;
     }
 
-    dcc_buf[0]      = 0x80 | ((addr >> 2) & 0x3F);                                                      // 10AA-AAAA
-    dcc_buf[1]      = 0x80 | ((~addr >> 4) & 0x70) | 0x08 | ((addr & 0x03) << 1) | (nswitch & 0x01);    // 1AAA-1AAR
-    dcc_buf[2]      = dcc_buf[0] ^ dcc_buf[1];                                                          // xor value
-    dcc_loco_idx    = 0xFFFF;                                                                           // reset dcc_loco_idx
-    dcc_buflen      = 0x80 | 0x03;                                                                      // at least set dcc_buflen
+    dcc_buf[0]      = 0x80 | ((swaddr >> 2) & 0x3F);                                                        // 10AA-AAAA
+    dcc_buf[1]      = 0x80 | ((~swaddr >> 4) & 0x70) | 0x08 | ((swaddr & 0x03) << 1) | (swstate & 0x01);    // 1AAA-1AAR
+    dcc_buf[2]      = dcc_buf[0] ^ dcc_buf[1];                                                              // xor value
+    dcc_loco_idx    = 0xFFFF;                                                                               // reset dcc_loco_idx
+    dcc_buflen      = 0x80 | 0x03;                                                                          // at least set dcc_buflen
     listener_set_stop ();
+
+    dcc_switch_reset.millis     = millis + 200;
+    dcc_switch_reset.addr       = addr;
+    dcc_switch_reset.nswitch    = nswitch;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1897,14 +2095,18 @@ dcc_base_switch_set (uint_fast16_t addr, uint_fast8_t nswitch)
 void
 dcc_base_switch_reset (uint_fast16_t addr, uint_fast8_t nswitch)
 {
+    uint_fast16_t swaddr;
+    uint_fast16_t swstate;
+
     if (nswitch == DCC_SWITCH_STATE_BRANCH2)    // BRANCH-2 for 3way switch
     {                                           // use following address
-        addr += 4;                              // 1st address = xx00-0001 x111-x00x
-        nswitch = DCC_SWITCH_STATE_BRANCH;
+        swaddr = addr + 4;                      // 1st address = xx00-0001 x111-x00x
+        swstate = DCC_SWITCH_STATE_BRANCH;
     }
     else
     {
-        addr += 3;                              // 1st address = xx00-0001 x111-x00x
+        swaddr = addr + 3;                      // 1st address = xx00-0001 x111-x00x
+        swstate = nswitch;
     }
 
     while (dcc_buflen != 0)
@@ -1912,13 +2114,48 @@ dcc_base_switch_reset (uint_fast16_t addr, uint_fast8_t nswitch)
         ;
     }
 
-    dcc_buf[0]      = 0x80 | ((addr >> 2) & 0x3F);                                                  // 10AA-AAAA
-    dcc_buf[1]      = 0x80 | ((~addr >> 4) & 0x70) | ((addr & 0x03) << 1) | (nswitch & 0x01);       // 1AAA-0AAR
+    dcc_buf[0]      = 0x80 | ((swaddr >> 2) & 0x3F);                                                // 10AA-AAAA
+    dcc_buf[1]      = 0x80 | ((~swaddr >> 4) & 0x70) | ((swaddr & 0x03) << 1) | (swstate & 0x01);   // 1AAA-0AAR
     dcc_buf[2]      = dcc_buf[0] ^ dcc_buf[1];                                                      // xor value
     dcc_loco_idx    = 0xFFFF;                                                                       // reset dcc_loco_idx
     dcc_buflen      = 3;                                                                            // at least set dcc_buflen
     listener_set_stop ();
 }
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * dcc_ext_accessory_set () - send 8 bit value to extended accessory decoder
+ *
+ *  Group:
+ *  10xx-xxxx               Accessory Decoder Control (RCN-213 2)
+ *
+ *  Operation:
+ *  10AA-AAAA 0AAA-0AA1 DDDD-DDDD   Extended Accessory Decoder Control (RCN-213 2.2)
+ *
+ *  Format
+ *   1   0  A   A   -  A   A   A   A       0  A    A    A    -  0  A   A    1
+ *   –   –  A7  A6  -  A5  A4  A3  A2      –  /A10 /A9  /A8  -  –  A1  A0   –
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+dcc_ext_accessory_set (uint_fast16_t addr, uint_fast8_t value)
+{
+    addr += 3;                                                                                      // 1st address = xx00-0001 x111-x00x
+
+    while (dcc_buflen != 0)
+    {
+        ;
+    }
+
+    dcc_buf[0]      = 0x80 | ((addr >> 2) & 0x3F);                                                  // 10AA-AAAA
+    dcc_buf[1]      = ((~addr >> 4) & 0x70) | ((addr & 0x03) << 1) | 0x01;                          // 0AAA-0AA1
+    dcc_buf[2]      = value;
+    dcc_buf[3]      = dcc_buf[0] ^ dcc_buf[1] ^ dcc_buf[2];                                         // xor value
+    dcc_loco_idx    = 0xFFFF;                                                                       // reset dcc_loco_idx
+    dcc_buflen      = 0x80 | 0x04;                                                                  // at least set dcc_buflen
+
+    listener_set_stop ();
+}
+
 
 /*------------------------------------------------------------------------------------------------------------------------
  * dcc_booster_on () - switch booster on
@@ -1935,7 +2172,6 @@ dcc_booster_on (void)
     }
 
     do_switch_booster_on = 1;                                                               // switch booster on in ISR
-    // listener_send_debug_msg ("dcc_booster_on()");
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1946,7 +2182,12 @@ void
 dcc_booster_off (void)
 {
     booster_off ();
-    // listener_send_debug_msg ("dcc_booster_off()");
+}
+
+void
+dcc_set_shortcut_value (uint_fast16_t value)
+{
+    dcc_shortcut_value = value;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1958,4 +2199,13 @@ dcc_init (void)
 {
     booster_init ();
     timer2_init ();
+
+#if PGM_METHOD == PGM_METHOD_ACK
+    PGM_PERIPH_CLOCK_CMD (PGM_PERIPH, ENABLE);                                              // enable clock for PGM Port
+
+    GPIO_InitTypeDef gpio;
+    GPIO_StructInit (&gpio);
+    GPIO_SET_MODE_IN_UP(gpio, PGM_ACK_PIN, GPIO_Speed_2MHz);
+    GPIO_Init(PGM_PORT, &gpio);
+#endif
 }

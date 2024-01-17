@@ -295,6 +295,10 @@
 		<Unit filename="SPL\src\stm32f4xx_wwdg.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="src\adc1-dma\adc1-dma.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src\adc1-dma\adc1-dma.h" />
 		<Unit filename="src\board-led\board-led.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -361,10 +365,10 @@
 		<Extensions>
 			<code_completion />
 			<debugger>
-				<target_debugging_settings target="STM32F401CC Release">
+				<target_debugging_settings target="STM32F401CC Debug">
 					<debug_interface description="STM32F407.svd" options="2" reg_filter="0" probe="STlink" device="stm32-auto" speed="" bus_address="" serial="" defines="" scripts="" flash_size="" ram_size="" vcc_voltage="" verbose="4" unwind="2" rstType="0" use_jtag="false" disable_cache="false" enable_semi="false" close_eblink="false" gdb_reset="" gdb_reset_remote="reset" gdb_before_conn="" gdb_after_conn="" use_remote="false" ip_address="" ip_port="" path="" executable="" start_server="false" arguments="" flash_verify="false" flash_run="false" />
 				</target_debugging_settings>
-				<target_debugging_settings target="STM32F401CC Debug">
+				<target_debugging_settings target="STM32F401CC Release">
 					<debug_interface description="STM32F407.svd" options="2" reg_filter="0" probe="STlink" device="stm32-auto" speed="" bus_address="" serial="" defines="" scripts="" flash_size="" ram_size="" vcc_voltage="" verbose="4" unwind="2" rstType="0" use_jtag="false" disable_cache="false" enable_semi="false" close_eblink="false" gdb_reset="" gdb_reset_remote="reset" gdb_before_conn="" gdb_after_conn="" use_remote="false" ip_address="" ip_port="" path="" executable="" start_server="false" arguments="" flash_verify="false" flash_run="false" />
 				</target_debugging_settings>
 			</debugger>

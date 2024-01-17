@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * listener.h - listener routines
  *---------------------------------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2016-2022 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2016-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,10 +23,18 @@
 #define UART_PREFIX             listener
 #include "uart.h"
 
+// messages coming from RCL detector:
+#define MAX_RCL_MSG_LEN         8
+#define MSG_RCL_RC2             0x01
+#define MSG_RCL_PGM_ACK         0x02
+#define MSG_RCL_POM_CV          0x03
+#define MSG_RCL_ACK             0x04    // later, see main.c
+
 extern void                     listener_set_stop (void);
 extern void                     listener_set_continue (void);
 extern void                     listener_send_continue (void);
 
+extern void                     listener_send_msg_alert (char * msg);
 extern void                     listener_send_msg_adc (uint_fast16_t adc);
 extern void                     listener_send_msg_rc1 (void);
 extern void                     listener_send_msg_rc2 (void);
@@ -42,6 +50,6 @@ extern void                     listener_queue_debug_msgf (const char * fmt, ...
 extern void                     listener_flush_debug_msg (void);
 
 extern uint_fast8_t             listener_read_cmd (void);
-extern uint_fast8_t             listener_read_rcl (void);
+extern uint8_t *                listener_read_rcl (void);
 extern void                     listener_msg_init (void);
 
