@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * http-railroad.cc - HTTP railroad routines
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,14 +48,15 @@ print_select_switch (uint_fast8_t subidx, uint_fast16_t swidx)
 {
     uint_fast16_t idx;
 
-    HTTP::response += (String) "<select class='select' name='rr" + std::to_string(subidx) + "'>\r\n";
-    HTTP::response += (String) "<option value='0'>---</option>\r\n";
+    HTTP::response += (String)
+        "<select class='select' name='rr" + std::to_string(subidx) + "'>\r\n"
+        "<option value='0'>---</option>\r\n";
 
-    uint_fast16_t n_switches = Switch::get_n_switches ();
+    uint_fast16_t n_switches = Switches::get_n_switches ();
 
     for (idx = 0; idx < n_switches; idx++)
     {
-        char *  name    = Switch::get_name (idx);
+        std::string name    = Switches::switches[idx].get_name();
 
         HTTP::response += (String) "<option value='" + std::to_string(idx + 1) + "'";
 
@@ -65,7 +66,7 @@ print_select_switch (uint_fast8_t subidx, uint_fast16_t swidx)
         }
 
         HTTP::response += (String) ">";
-        HTTP::response += (String) name;
+        HTTP::response += name;
         HTTP::response += (String) "</option>\r\n";
     }
     HTTP::response += (String) "</select>\r\n";
@@ -95,12 +96,13 @@ print_switch_state (uint_fast8_t subidx, uint_fast8_t state)
         checked_branch2 = "checked";
     }
 
-    HTTP::response += (String) "<input type='radio' id='gerade" + std::to_string(subidx) + "' name='state" + std::to_string(subidx) + "' value='1' " + checked_straight + ">";
-    HTTP::response += (String) "<label for='gerade" + std::to_string(subidx) + "'>Gerade</label>\r\n";
-    HTTP::response += (String) "<input type='radio' id='abzweig" + std::to_string(subidx) + "' name='state" + std::to_string(subidx) + "' value='0' " + checked_branch + ">";
-    HTTP::response += (String) "<label for='abzweig" + std::to_string(subidx) + "'>Abzweig</label>\r\n";
-    HTTP::response += (String) "<input type='radio' id='abzweig2" + std::to_string(subidx) + "' name='state" + std::to_string(subidx) + "' value='2' " + checked_branch2 + ">";
-    HTTP::response += (String) "<label for='abzweig2" + std::to_string(subidx) + "'>Abzweig2</label>\r\n";
+    HTTP::response += (String)
+        "<input type='radio' id='gerade" + std::to_string(subidx) + "' name='state" + std::to_string(subidx) + "' value='1' " + checked_straight + ">"
+        "<label for='gerade" + std::to_string(subidx) + "'>Gerade</label>\r\n"
+        "<input type='radio' id='abzweig" + std::to_string(subidx) + "' name='state" + std::to_string(subidx) + "' value='0' " + checked_branch + ">"
+        "<label for='abzweig" + std::to_string(subidx) + "'>Abzweig</label>\r\n"
+        "<input type='radio' id='abzweig2" + std::to_string(subidx) + "' name='state" + std::to_string(subidx) + "' value='2' " + checked_branch2 + ">"
+        "<label for='abzweig2" + std::to_string(subidx) + "'>Abzweig2</label>\r\n";
 }
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
@@ -114,8 +116,6 @@ HTTP_Railroad::handle_rr (void)
     String          url       = "/rr";
     String          urledit   = "/rredit";
     const char *    action    = HTTP::parameter ("action");
-    uint_fast8_t    rrg_idx   = 0;
-    uint_fast8_t    rr_idx    = 0;
 
     HTTP_Common::html_header (title, title, url, true);
     HTTP::response += (String) "<div style='margin-left:20px;'>\r\n";
@@ -144,27 +144,27 @@ HTTP_Railroad::handle_rr (void)
         strncpy (name, sname, 127);
         name[127] = '\0';
 
-        rrgidx = Railroad::group_add ();
+        rrgidx = RailroadGroups::add ({});
 
         if (rrgidx != 0xFF)
         {
-            Railroad::group_setname (rrgidx, name);
+            RailroadGroups::railroad_groups[rrgidx].set_name (name);
         }
     }
     else if (! strcmp (action, "changerrg"))
     {
-        const char *    sname       = HTTP::parameter ("name");
-        uint_fast8_t   rrgidx       = HTTP::parameter_number ("rrgidx");
-        uint_fast8_t   nrrgidx      = HTTP::parameter_number ("nrrgidx");
+        const char *    sname   = HTTP::parameter ("name");
+        uint_fast8_t    rrgidx  = HTTP::parameter_number ("rrgidx");
+        uint_fast8_t    nrrgidx = HTTP::parameter_number ("nrrgidx");
 
         if (rrgidx != nrrgidx)
         {
-            nrrgidx = Railroad::group_setid (rrgidx, nrrgidx);
+            nrrgidx = RailroadGroups::set_new_id (rrgidx, nrrgidx);
         }
 
         if (nrrgidx != 0xFF)
         {
-            Railroad::group_setname (nrrgidx, sname);
+            RailroadGroups::railroad_groups[nrrgidx].set_name (sname);
         }
     }
     else if (! strcmp (action, "newrr"))
@@ -177,11 +177,11 @@ HTTP_Railroad::handle_rr (void)
         strncpy (name, sname, 127);
         name[127] = '\0';
 
-        rridx = Railroad::add (rrgidx);
+        rridx = RailroadGroups::railroad_groups[rrgidx].add ({});
 
         if (rridx != 0xFF)
         {
-            Railroad::set_name (rrgidx, rridx, name);
+            RailroadGroups::railroad_groups[rrgidx].railroads[rridx].set_name (name);
         }
     }
     else if (! strcmp (action, "changerr"))  // see handle_rr_edit())
@@ -191,17 +191,21 @@ HTTP_Railroad::handle_rr (void)
         uint_fast16_t   rridx           = HTTP::parameter_number ("rridx");
         uint_fast16_t   nrridx          = HTTP::parameter_number ("nrridx");
         uint_fast16_t   ll              = HTTP::parameter_number ("ll");
-        uint_fast8_t    n_rr_switches   = Railroad::get_n_switches (rrgidx, rridx);
+        Railroad *      rr              = &RailroadGroups::railroad_groups[rrgidx].railroads[rridx];
+        uint_fast8_t    n_rr_switches   = rr->get_n_switches ();
         uint_fast8_t    real_sub_idx    = 0;
+        Railroad *      nrr;
         uint_fast8_t    sub_idx;
 
         if (rridx != nrridx)
         {
-            nrridx = Railroad::setid (rrgidx, rridx, nrridx);
+            nrridx = RailroadGroups::railroad_groups[rrgidx].set_new_id(rridx, nrridx);
         }
 
-        Railroad::set_name (rrgidx, nrridx, sname);
-        Railroad::set_link_loco (rrgidx, nrridx, ll);
+        nrr = &RailroadGroups::railroad_groups[rrgidx].railroads[nrridx];
+
+        nrr->set_name (sname);
+        nrr->set_link_loco (ll);
 
         for (sub_idx = 0; sub_idx < MAX_SWITCHES_PER_RAILROAD; sub_idx++)
         {
@@ -219,11 +223,11 @@ HTTP_Railroad::handle_rr (void)
                 sprintf (buf, "state%d", sub_idx);
                 state = HTTP::parameter_number (buf);
 
-                uint_fast8_t    flags   = Switch::get_flags (swidx);
+                uint_fast8_t    flags   = Switches::switches[swidx].get_flags();
 
                 if (state == DCC_SWITCH_STATE_BRANCH2 && ! (flags & SWITCH_FLAG_3WAY))
                 {
-                    char *  swname  = Switch::get_name (swidx);
+                    std::string swname  = Switches::switches[swidx].get_name();
 
                     state = DCC_SWITCH_STATE_BRANCH;
                     HTTP::response += (String) "<font color='red'>Warnung: " + swname + " ist keine 3-Wege-Weiche. Daten wurden ge&auml;ndert auf 'Abzweig'.</font><P>";
@@ -235,7 +239,7 @@ HTTP_Railroad::handle_rr (void)
                 {
                     uint_fast8_t new_idx = 0xFF;
 
-                    new_idx = Railroad::add_switch (rrgidx, nrridx);
+                    new_idx = nrr->add_switch();
 
                     if (new_idx != 0xFF)
                     {
@@ -254,8 +258,8 @@ HTTP_Railroad::handle_rr (void)
 
                 if (its_ok)
                 {
-                    Railroad::set_switch_idx (rrgidx, nrridx, real_sub_idx, swidx);
-                    Railroad::set_switch_state (rrgidx, nrridx, real_sub_idx, state);
+                    nrr->set_switch_idx(real_sub_idx, swidx);
+                    nrr->set_switch_state(real_sub_idx, state);
                     real_sub_idx++;
                 }
             }
@@ -263,7 +267,7 @@ HTTP_Railroad::handle_rr (void)
 
         while (real_sub_idx < n_rr_switches)
         {
-            if (Railroad::del_switch (rrgidx, nrridx, n_rr_switches - 1))
+            if (nrr->del_switch (n_rr_switches - 1))
             {
                 n_rr_switches--;
             }
@@ -274,40 +278,42 @@ HTTP_Railroad::handle_rr (void)
         uint_fast16_t   rrgidx    = HTTP::parameter_number ("rrgidx");
         uint_fast16_t   rridx     = HTTP::parameter_number ("rridx");
 
-        Railroad::del (rrgidx, rridx);
+        RailroadGroups::railroad_groups[rrgidx].del(rridx);
     }
     else if (! strcmp (action, "delrrg"))
     {
         uint_fast16_t   rrgidx    = HTTP::parameter_number ("rrgidx");
 
-        Railroad::group_del (rrgidx);
+        RailroadGroups::del(rrgidx);
     }
 
-    const char *  bg;
+    uint_fast8_t    rrgidx   = 0;
+    uint_fast8_t    rridx    = 0;
+    const char *    bg;
 
-    HTTP::response += (String) "<script>\r\n";
-    HTTP::response += (String) "function rrset(rrgidx, rridx) { var http = new XMLHttpRequest(); http.open ('GET', '/action?action=rrset&rrgidx=' + rrgidx + '&rridx=' + rridx);";
-    HTTP::response += (String) "http.addEventListener('load',";
-    HTTP::response += (String) "function(event) { var text = http.responseText; if (http.status >= 200 && http.status < 300) { if (text !== '') alert (text); }});";
-    HTTP::response += (String) "http.send (null);}\r\n";
-    HTTP::response += (String) "function changerrg(rrgidx, name)\r\n";
-    HTTP::response += (String) "{\r\n";
-    HTTP::response += (String) "  document.getElementById('action').value = 'changerrg';\r\n";
-    HTTP::response += (String) "  document.getElementById('rrgidx').value = rrgidx;\r\n";
-    HTTP::response += (String) "  document.getElementById('nrrgidx').value = rrgidx;\r\n";
-    HTTP::response += (String) "  document.getElementById('name').value = name;\r\n";
-    HTTP::response += (String) "  document.getElementById('newid').style.display='';\r\n";
-    HTTP::response += (String) "  document.getElementById('formrrg').style.display='';\r\n";
-    HTTP::response += (String) "}\r\n";
-    HTTP::response += (String) "function newrrg()\r\n";
-    HTTP::response += (String) "{\r\n";
-    HTTP::response += (String) "  document.getElementById('action').value = 'newrrg';\r\n";
-    HTTP::response += (String) "  document.getElementById('name').value = name;\r\n";
-    HTTP::response += (String) "  document.getElementById('newid').style.display='none';\r\n";
-    HTTP::response += (String) "  document.getElementById('formrrg').style.display='';\r\n";
-    HTTP::response += (String) "}\r\n";
-
-    HTTP::response += (String) "function newrr(rrgidx) { document.getElementById('formrr' + rrgidx).style.display=''; }\r\n";
+    HTTP::response += (String)
+        "<script>\r\n"
+        "function rrset(rrgidx, rridx) { var http = new XMLHttpRequest(); http.open ('GET', '/action?action=rrset&rrgidx=' + rrgidx + '&rridx=' + rridx);"
+        "http.addEventListener('load',"
+        "function(event) { var text = http.responseText; if (http.status >= 200 && http.status < 300) { if (text !== '') alert (text); }});"
+        "http.send (null);}\r\n"
+        "function changerrg(rrgidx, name)\r\n"
+        "{\r\n"
+        "  document.getElementById('action').value = 'changerrg';\r\n"
+        "  document.getElementById('rrgidx').value = rrgidx;\r\n"
+        "  document.getElementById('nrrgidx').value = rrgidx;\r\n"
+        "  document.getElementById('name').value = name;\r\n"
+        "  document.getElementById('newid').style.display='';\r\n"
+        "  document.getElementById('formrrg').style.display='';\r\n"
+        "}\r\n"
+        "function newrrg()\r\n"
+        "{\r\n"
+        "  document.getElementById('action').value = 'newrrg';\r\n"
+        "  document.getElementById('name').value = name;\r\n"
+        "  document.getElementById('newid').style.display='none';\r\n"
+        "  document.getElementById('formrrg').style.display='';\r\n"
+        "}\r\n"
+        "function newrr(rrgidx) { document.getElementById('formrr' + rrgidx).style.display=''; }\r\n";
 
     HTTP::flush ();
 
@@ -317,60 +323,69 @@ HTTP_Railroad::handle_rr (void)
 
     HTTP::flush ();
 
-    uint_fast8_t    n_railroad_groups = Railroad::get_n_railroad_groups ();
+    uint_fast8_t    n_railroad_groups = RailroadGroups::get_n_railroad_groups ();
 
-    for (rrg_idx = 0; rrg_idx < n_railroad_groups; rrg_idx++)
+    for (rrgidx = 0; rrgidx < n_railroad_groups; rrgidx++)
     {
-        char * rrg_name = Railroad::group_getname (rrg_idx);
+        std::string rrg_name = RailroadGroups::railroad_groups[rrgidx].get_name();
 
-        HTTP::response += (String) "<P><table style='border:1px lightgray solid;'>\r\n";
-        HTTP::response += (String) "<tr bgcolor='#e0e0e0'><th>ID</th><th style='width:170px'>" + String (rrg_name) + "</th>";
-        HTTP::response += (String) "<th style='width:170px' nowrap>Verkn&uuml;pfte Lok</th>";
-        HTTP::response += (String) "<th class='hide650' style='width:170px' nowrap>Aktivierung durch</th>";
-        HTTP::response += (String) "<th class='hide650' style='width:170px' nowrap>Erkannte Lok</th>";
-        HTTP::response += (String) "<th>Aktion</th>";
+        HTTP::response += (String)
+            "<P><table style='border:1px lightgray solid;'>\r\n"
+            "<tr bgcolor='#e0e0e0'><th>ID</th><th style='width:170px'>" + String (rrg_name) + "</th>"
+            "<th style='width:170px' nowrap>Verkn&uuml;pfte Lok</th>"
+            "<th class='hide650' style='width:170px' nowrap>Aktivierung durch</th>"
+            "<th class='hide650' style='width:170px' nowrap>Erkannte Lok</th>"
+            "<th>Aktion</th>";
 
         if (HTTP_Common::edit_mode)
         {
-            HTTP::response += (String) "<th><button onclick=\"changerrg(" + std::to_string(rrg_idx) + ",'" + String (rrg_name) + "')\">Bearbeiten</th>";
-            HTTP::response += (String) "<th><button onclick=\"window.location.href='" + url + "?action=delrrg&rrgidx=" + std::to_string(rrg_idx) + "'; \">L&ouml;schen</button></th>";
+            HTTP::response += (String) "<th><button onclick=\"changerrg(" + std::to_string(rrgidx) + ",'" + String (rrg_name) + "')\">Bearbeiten</th>";
+            HTTP::response += (String) "<th><button onclick=\"window.location.href='" + url + "?action=delrrg&rrgidx=" + std::to_string(rrgidx) + "'; \">L&ouml;schen</button></th>";
         }
 
         HTTP::response += (String) "</tr>\r\n";
 
-        uint_fast8_t    n_railroads             = Railroad::get_n_railroads (rrg_idx);
+        uint_fast8_t    n_railroads             = RailroadGroups::railroad_groups[rrgidx].get_n_railroads();
 
-        for (rr_idx = 0; rr_idx < n_railroads; rr_idx++)
+        for (rridx = 0; rridx < n_railroads; rridx++)
         {
-            uint_fast16_t   linked_loco_idx     = Railroad::get_link_loco (rrg_idx, rr_idx);
-            uint_fast16_t   located_loco_idx    = Railroad::get_located_loco (rrg_idx, rr_idx);
-            uint_fast16_t   active_loco_idx     = Railroad::get_active_loco (rrg_idx, rr_idx);
-            const char *    linked_loco_name;
-            const char *    located_loco_name;
-            const char *    active_loco_name;
+            Railroad *      rr                  = &RailroadGroups::railroad_groups[rrgidx].railroads[rridx];
+            uint_fast16_t   linked_loco_idx     = rr->get_link_loco();
+            uint_fast16_t   located_loco_idx    = rr->get_located_loco();
+            uint_fast16_t   active_loco_idx     = rr->get_active_loco();
+            String          rr_name             = rr->get_name();
+            String          linked_loco_name;
+            String          located_loco_name;
+            String          active_loco_name;
 
-            linked_loco_name = Loco::get_name (linked_loco_idx);
-
-            if (! linked_loco_name)
+            if (linked_loco_idx != 0xFFFF)
+            {
+                linked_loco_name = Locos::locos[linked_loco_idx].get_name();
+            }
+            else
             {
                 linked_loco_name = "";
             }
 
-            active_loco_name = Loco::get_name (active_loco_idx);
-
-            if (! active_loco_name)
+            if (located_loco_idx != 0xFFFF)
             {
-                active_loco_name = "";
+                located_loco_name = Locos::locos[located_loco_idx].get_name();
             }
-
-            located_loco_name = Loco::get_name (located_loco_idx);
-
-            if (! located_loco_name)
+            else
             {
                 located_loco_name = "";
             }
 
-            if (rr_idx % 2)
+            if (active_loco_idx != 0xFFFF)
+            {
+                active_loco_name = Locos::locos[active_loco_idx].get_name();
+            }
+            else
+            {
+                active_loco_name = "";
+            }
+
+            if (rridx % 2)
             {
                 bg = "bgcolor='#e0e0e0'";
             }
@@ -379,21 +394,19 @@ HTTP_Railroad::handle_rr (void)
                 bg = "";
             }
 
-            char * rr_name = Railroad::get_name (rrg_idx, rr_idx);
-
-            HTTP::response += (String) "<tr " + bg + "><td style='text-align:right' id='id_" + std::to_string(rrg_idx) + "_" + std::to_string(rr_idx) + "'>" + std::to_string(rr_idx) + "&nbsp;</td>"
+            HTTP::response += (String) "<tr " + bg + "><td style='text-align:right' id='id_" + std::to_string(rrgidx) + "_" + std::to_string(rridx) + "'>" + std::to_string(rridx) + "&nbsp;</td>"
                         + "<td>" + rr_name + "</td>"
                         + "<td style='width:170px;overflow:hidden' nowrap><a href='/loco?action=loco&lidx=" + std::to_string(linked_loco_idx) + "'>" + linked_loco_name + "</a></td>"
-                        + "<td class='hide650' id='act_" + std::to_string(rrg_idx) + "_" + std::to_string(rr_idx) + "' style='width:170px;overflow:hidden' nowrap><a href='/loco?action=loco&lidx=" + std::to_string(active_loco_idx) + "'>" + active_loco_name + "</a></td>"
-                        + "<td class='hide650' id='loc_" + std::to_string(rrg_idx) + "_" + std::to_string(rr_idx) + "' style='width:170px;overflow:hidden' nowrap><a href='/loco?action=loco&lidx=" + std::to_string(located_loco_idx) + "'>" + located_loco_name + "</a></td>"
-                        + "<td><button onclick=rrset(" + std::to_string(rrg_idx) + "," + std::to_string(rr_idx) + ")>Setzen</button></td>";
+                        + "<td class='hide650' id='act_" + std::to_string(rrgidx) + "_" + std::to_string(rridx) + "' style='width:170px;overflow:hidden' nowrap><a href='/loco?action=loco&lidx=" + std::to_string(active_loco_idx) + "'>" + active_loco_name + "</a></td>"
+                        + "<td class='hide650' id='loc_" + std::to_string(rrgidx) + "_" + std::to_string(rridx) + "' style='width:170px;overflow:hidden' nowrap><a href='/loco?action=loco&lidx=" + std::to_string(located_loco_idx) + "'>" + located_loco_name + "</a></td>"
+                        + "<td><button onclick=rrset(" + std::to_string(rrgidx) + "," + std::to_string(rridx) + ")>Setzen</button></td>";
 
             if (HTTP_Common::edit_mode)
             {
                 HTTP::response += (String)
-                          "<td><button onclick=\"window.location.href='" + urledit + "?rrgidx=" + std::to_string(rrg_idx) + "&rridx=" + std::to_string(rr_idx) + "'; "
+                          "<td><button onclick=\"window.location.href='" + urledit + "?rrgidx=" + std::to_string(rrgidx) + "&rridx=" + std::to_string(rridx) + "'; "
                         + "\">Bearbeiten</button></td>"
-                        + "<td><button onclick=\"window.location.href='" + url + "?action=delrr&rrgidx=" + std::to_string(rrg_idx) + "&rridx=" + std::to_string(rr_idx) + "'; \">L&ouml;schen</button></td>";
+                        + "<td><button onclick=\"window.location.href='" + url + "?action=delrr&rrgidx=" + std::to_string(rrgidx) + "&rridx=" + std::to_string(rridx) + "'; \">L&ouml;schen</button></td>";
             }
 
             HTTP::response += (String) "</tr>\r\n";
@@ -403,16 +416,17 @@ HTTP_Railroad::handle_rr (void)
 
         if (HTTP_Common::edit_mode)
         {
-            HTTP::response += (String) "<button onclick='newrr(" + std::to_string(rrg_idx) + ")'>Neues Gleis</button>\r\n";
-            HTTP::response += (String) "<form id='formrr" + std::to_string(rrg_idx) + "' style='display:none'>\r\n";
-            HTTP::response += (String) "<table>\r\n";
-            HTTP::response += (String) "<tr><td>Name:</td><td><input type='text' style='width:200px' name='name' value=''></td></tr>\r\n";
-            HTTP::response += (String) "<tr><td></td><td align='right'>";
-            HTTP::response += (String) "<input type='hidden' name='action' value='newrr'>\r\n";
-            HTTP::response += (String) "<input type='hidden' name='rrgidx' value='" + std::to_string(rrg_idx) + "'>\r\n";
-            HTTP::response += (String) "<input type='submit' value='Speichern'></td></tr>\r\n";
-            HTTP::response += (String) "</table>\r\n";
-            HTTP::response += (String) "</form><BR>\r\n";
+            HTTP::response += (String)
+                "<button onclick='newrr(" + std::to_string(rrgidx) + ")'>Neues Gleis</button>\r\n"
+                "<form id='formrr" + std::to_string(rrgidx) + "' style='display:none'>\r\n"
+                "<table>\r\n"
+                "<tr><td>Name:</td><td><input type='text' style='width:200px' name='name' value=''></td></tr>\r\n"
+                "<tr><td></td><td align='right'>"
+                "<input type='hidden' name='action' value='newrr'>\r\n"
+                "<input type='hidden' name='rrgidx' value='" + std::to_string(rrgidx) + "'>\r\n"
+                "<input type='submit' value='Speichern'></td></tr>\r\n"
+                "</table>\r\n"
+                "</form><BR>\r\n";
         }
 
         HTTP::flush ();
@@ -420,28 +434,33 @@ HTTP_Railroad::handle_rr (void)
 
     if (HTTP_Common::edit_mode)
     {
-        HTTP::response += (String) "<P><button onclick='newrrg()'>Neue Fahrstra&szlig;e</button>\r\n";
-        HTTP::response += (String) "<form id='formrrg' style='display:none'>\r\n";
-        HTTP::response += (String) "<table>\r\n";
-        HTTP::response += (String) "<tr id='newid'>\r\n";
+        HTTP::response += (String)
+            "<P><button onclick='newrrg()'>Neue Fahrstra&szlig;e</button>\r\n"
+            "<form id='formrrg' style='display:none'>\r\n"
+            "<table>\r\n"
+            "<tr id='newid'>\r\n";
+
         HTTP_Common::print_id_select_list ("nrrgidx", n_railroad_groups);
-        HTTP::response += (String) "</tr>\r\n";
-        HTTP::response += (String) "<tr><td>Name der Fahrstra&szlig;e:</td><td><input type='text' style='width:200px' id='name' name='name'></td></tr>\r\n";
-        HTTP::response += (String) "<tr><td></td><td align='right'>";
-        HTTP::response += (String) "<input type='hidden' name='action' id='action' value='newrrg'>\r\n";
-        HTTP::response += (String) "<input type='hidden' name='rrgidx' id='rrgidx'>\r\n";
-        HTTP::response += (String) "<input type='submit' value='Speichern'></td></tr>\r\n";
-        HTTP::response += (String) "</table>\r\n";
-        HTTP::response += (String) "</form>\r\n";
+
+        HTTP::response += (String)
+            "</tr>\r\n"
+            "<tr><td>Name der Fahrstra&szlig;e:</td><td><input type='text' style='width:200px' id='name' name='name'></td></tr>\r\n"
+            "<tr><td></td><td align='right'>"
+            "<input type='hidden' name='action' id='action' value='newrrg'>\r\n"
+            "<input type='hidden' name='rrgidx' id='rrgidx'>\r\n"
+            "<input type='submit' value='Speichern'></td></tr>\r\n"
+            "</table>\r\n"
+            "</form>\r\n";
 
         HTTP::flush ();
     }
 
-    if (Railroad::data_changed)
+    if (RailroadGroups::data_changed)
     {
-        HTTP::response += (String) "<BR><form method='get' action='" + url + "'>\r\n";
-        HTTP::response += (String) "<input type='hidden' name='action' value='saverrg'>\r\n";
-        HTTP::response += (String) "<input type='submit' value='Ge&auml;nderte Konfiguration auf Datentr&auml;ger speichern'>\r\n";
+        HTTP::response += (String)
+            "<BR><form method='get' action='" + url + "'>\r\n"
+            "<input type='hidden' name='action' value='saverrg'>\r\n"
+            "<input type='submit' value='Ge&auml;nderte Konfiguration auf Datentr&auml;ger speichern'>\r\n";
     }
 
     HTTP::response += (String) "</div>\r\n";
@@ -460,17 +479,18 @@ HTTP_Railroad::handle_rr_edit (void)
     String          title           = (String) "<a href='" + url + "'>Fahrstra&szlig;en</a> &rarr; " + "Fahrstra&szlig;e bearbeiten";
     uint_fast8_t    rrgidx          = HTTP::parameter_number ("rrgidx");
     uint_fast8_t    rridx           = HTTP::parameter_number ("rridx");
-    uint_fast8_t    n_rr_switches   = Railroad::get_n_switches (rrgidx, rridx);
+    RailroadGroup * rrg             = &RailroadGroups::railroad_groups[rrgidx];
+    Railroad *      rr              = &(rrg->railroads[rridx]);
+    uint_fast8_t    n_railroads     = rrg->get_n_railroads();
+    std::string     rr_name         = rr->get_name();
+    uint_fast16_t   linked_loco     = rr->get_link_loco();
+    uint_fast8_t    n_rr_switches   = rr->get_n_switches ();
     uint_fast8_t    sub_idx;
 
     HTTP_Common::html_header (browsertitle, title, url, true);
     HTTP::response += (String) "<div style='margin-left:20px;'>\r\n";
     HTTP_Common::add_action_handler ("head", "", 200, true);
     
-    char *          rr_name     = Railroad::get_name (rrgidx, rridx);
-    uint_fast8_t    n_railroads = Railroad::get_n_railroads (rrgidx);
-    uint_fast16_t   linked_loco = Railroad::get_link_loco (rrgidx, rridx);
-
     HTTP::response += (String) "<form method='get' action='" + url + "'>"
                 + "<table style='border:1px lightgray solid;'>\r\n";
 
@@ -505,10 +525,10 @@ HTTP_Railroad::handle_rr_edit (void)
 
         if (sub_idx < n_rr_switches)
         {
-            uint_fast16_t switch_idx = Railroad::get_switch_idx (rrgidx, rridx, sub_idx);
+            uint_fast16_t switch_idx = rr->get_switch_idx(sub_idx);
 
             swidx = switch_idx + 1; // swidx: 1 - n_switches
-            state = Railroad::get_switch_state (rrgidx, rridx, sub_idx);
+            state = rr->get_switch_state (sub_idx);
         }
         else
         {
@@ -516,7 +536,7 @@ HTTP_Railroad::handle_rr_edit (void)
             state = 0xFF;
         }
 
-        uint_fast16_t n_switches = Switch::get_n_switches ();
+        uint_fast16_t n_switches = Switches::get_n_switches ();
 
         if (swidx <= n_switches)                                                // swidx ends with n_switches!
         {
@@ -535,43 +555,45 @@ HTTP_Railroad::handle_rr_edit (void)
         HTTP::response += (String) "</tr>\r\n";
     }
 
-    HTTP::response += (String) "<tr><td><input type='button'  onclick=\"window.location.href='" + url + "';\" value='Zur&uuml;ck'></td>\r\n";
-    HTTP::response += (String) "<td align='right'><input type='hidden' name='action' id='action' value='changerr'>\r\n";
-    HTTP::response += (String) "<input type='hidden' name='rrgidx' value='" + std::to_string(rrgidx) + "'>\r\n";
-    HTTP::response += (String) "<input type='hidden' name='rridx' value='" + std::to_string(rridx) + "'>\r\n";
-    HTTP::response += (String) "<input type='submit' value='Speichern'></td></tr>\r\n";
-    HTTP::response += (String) "</table>\r\n";
-
-    HTTP::response += (String) "</form>\r\n";
-    HTTP::response += (String) "</div>\r\n";
+    HTTP::response += (String)
+        "<tr><td><input type='button'  onclick=\"window.location.href='" + url + "';\" value='Zur&uuml;ck'></td>\r\n"
+        "<td align='right'><input type='hidden' name='action' id='action' value='changerr'>\r\n"
+        "<input type='hidden' name='rrgidx' value='" + std::to_string(rrgidx) + "'>\r\n"
+        "<input type='hidden' name='rridx' value='" + std::to_string(rridx) + "'>\r\n"
+        "<input type='submit' value='Speichern'></td></tr>\r\n"
+        "</table>\r\n"
+        "</form>\r\n"
+        "</div>\r\n";
     HTTP_Common::html_trailer ();
 }
 
 void
 HTTP_Railroad::action_rr (void)
 {
-    uint_fast8_t    rrg_idx;
-    uint_fast8_t    rr_idx;
-    uint_fast8_t    n_railroad_groups = Railroad::get_n_railroad_groups ();
+    uint_fast8_t    rrgidx;
+    uint_fast8_t    rridx;
+    uint_fast8_t    n_railroad_groups = RailroadGroups::get_n_railroad_groups ();
 
     HTTP_Common::head_action ();
 
-    for (rrg_idx = 0; rrg_idx < n_railroad_groups; rrg_idx++)
+    for (rrgidx = 0; rrgidx < n_railroad_groups; rrgidx++)
     {
-        uint_fast8_t    n_railroads             = Railroad::get_n_railroads (rrg_idx);
-        uint_fast8_t    active_railroad_idx     = Railroad::get (rrg_idx);
+        RailroadGroup * rrg                     = &RailroadGroups::railroad_groups[rrgidx];
+        uint_fast8_t    n_railroads             = rrg->get_n_railroads();
+        uint_fast8_t    active_railroad_idx     = rrg->get_active_railroad();
 
-        for (rr_idx = 0; rr_idx < n_railroads; rr_idx++)
+        for (rridx = 0; rridx < n_railroads; rridx++)
         {
-            uint_fast16_t   active_loco_idx     = Railroad::get_active_loco (rrg_idx, rr_idx);
-            uint_fast16_t   located_loco_idx    = Railroad::get_located_loco (rrg_idx, rr_idx);
-            const char *    active_loco_name;
-            const char *    located_loco_name;
+            Railroad *      rr                  = &(rrg->railroads[rridx]);
+            uint_fast16_t   active_loco_idx     = rr->get_active_loco();
+            uint_fast16_t   located_loco_idx    = rr->get_located_loco();
+            String          active_loco_name;
+            String          located_loco_name;
             String          id;
 
-            id = (String) "id_" + std::to_string(rrg_idx) + "_" + std::to_string(rr_idx);
+            id = (String) "id_" + std::to_string(rrgidx) + "_" + std::to_string(rridx);
 
-            if (rr_idx == active_railroad_idx)
+            if (rridx == active_railroad_idx)
             {
                 HTTP_Common::add_action_content (id, "bgcolor", "green");
                 HTTP_Common::add_action_content (id, "color", "white");
@@ -582,24 +604,28 @@ HTTP_Railroad::action_rr (void)
                 HTTP_Common::add_action_content (id, "color", "");
             }
 
-            active_loco_name = Loco::get_name (active_loco_idx);
-
-            if (! active_loco_name)
+            if (active_loco_idx != 0xFFFF)
+            {
+                active_loco_name = Locos::locos[active_loco_idx].get_name();
+            }
+            else
             {
                 active_loco_name = "";
             }
 
-            id = (String) "act_" + std::to_string(rrg_idx) + "_" + std::to_string(rr_idx);
+            id = (String) "act_" + std::to_string(rrgidx) + "_" + std::to_string(rridx);
             HTTP_Common::add_action_content (id, "text", active_loco_name);
 
-            located_loco_name = Loco::get_name (located_loco_idx);
-
-            if (! located_loco_name)
+            if (located_loco_idx != 0xFFFF)
+            {
+                located_loco_name = Locos::locos[located_loco_idx].get_name();
+            }
+            else
             {
                 located_loco_name = "";
             }
 
-            id = (String) "loc_" + std::to_string(rrg_idx) + "_" + std::to_string(rr_idx);
+            id = (String) "loc_" + std::to_string(rrgidx) + "_" + std::to_string(rridx);
             HTTP_Common::add_action_content (id, "text", located_loco_name);
         }
     }
@@ -611,5 +637,5 @@ HTTP_Railroad::action_rrset (void)
     uint_fast16_t   rrgidx      = HTTP::parameter_number ("rrgidx");
     uint_fast16_t   rridx       = HTTP::parameter_number ("rridx");
 
-    Railroad::set (rrgidx, rridx);
+    RailroadGroups::railroad_groups[rrgidx].set_active_railroad(rridx);
 }

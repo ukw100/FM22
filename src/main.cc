@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------------------------------------------------------------
  * main.cc - main module of dcc-central
  *-------------------------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +25,15 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#include "fm22.h"
 #include "userio.h"
 #include "event.h"
 #include "loco.h"
 #include "http.h"
 #include "dcc.h"
 #include "switch.h"
+#include "led.h"
+#include "sig.h"
 #include "s88.h"
 #include "rcl.h"
 #include "fileio.h"
@@ -42,6 +45,7 @@
 #include "debug.h"
 
 #define SWITCH_FIRST_PERIOD     500
+#define SIGNAL_FIRST_PERIOD     700
 #define SCHEDULE_PERIOD         5
 #define RC2_RATE_PERIOD         1000
 
@@ -85,6 +89,7 @@ int
 main (int argc, char ** argv)
 {
     unsigned long   switch_millis;
+    unsigned long   signal_millis;
     unsigned long   next_millis;
     unsigned long   current_millis;
     uint_fast16_t   n_contacts;
@@ -124,11 +129,7 @@ main (int argc, char ** argv)
     signal (SIGHUP, myalarm);
     signal (SIGINT, myalarm);
 
-    FileIO::read_func_ini ();
-    FileIO::read_loco_ini ();
-    FileIO::read_switch_ini ();
-    FileIO::read_s88_ini ();
-    FileIO::read_rcl_ini ();
+    FileIO::read_all_ini_files ();
 
     Serial::init ();
     HTTP::init ();
@@ -146,7 +147,10 @@ main (int argc, char ** argv)
 
     current_millis  = Millis::elapsed ();
     switch_millis   = current_millis + SWITCH_FIRST_PERIOD;                 // 1st switch scheduling in 500 msec
+    signal_millis   = current_millis + SIGNAL_FIRST_PERIOD;                 // 1st signal scheduling in 700 msec
     next_millis     = current_millis + SCHEDULE_PERIOD;
+
+    DCC::set_shortcut_value (FM22::shortcut_value);
 
     n_contacts = S88::get_n_contacts ();
     DCC::set_s88_n_contacts (n_contacts);
@@ -163,7 +167,13 @@ main (int argc, char ** argv)
 
         if (current_millis > switch_millis)
         {
-            switch_millis = Switch::schedule () + Millis::elapsed ();
+            switch_millis = Switches::schedule () + Millis::elapsed ();
+            current_millis = Millis::elapsed ();
+        }
+
+        if (current_millis > signal_millis)
+        {
+            signal_millis = Signals::schedule () + Millis::elapsed ();
             current_millis = Millis::elapsed ();
         }
 
@@ -176,7 +186,7 @@ main (int argc, char ** argv)
 
             do
             {
-                loco_sched_rtc = Loco::schedule ();
+                loco_sched_rtc = Locos::schedule ();
                 S88::schedule ();
                 RCL::schedule ();
                 MSG::read_msg ();

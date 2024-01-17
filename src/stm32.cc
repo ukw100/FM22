@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * stm32.cc - STM32 flasher functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1183,6 +1183,7 @@ stm32_bootloader (const char * fname, bool do_unprotect)
         {
             HTTP::send ("Flash wird gel&ouml;scht... ");
             HTTP::flush ();
+
             erasetime = Millis::elapsed ();
             rtc = stm32_ext_erase (0, 0);
             erasetime = Millis::elapsed () - erasetime;

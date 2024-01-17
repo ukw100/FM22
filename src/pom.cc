@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * pom.cc - POM CV routines
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,12 +45,15 @@ POM::pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv)
 
     for (tries = 0; tries < POM_READ_MAX_TRIES; tries++)
     {
-        if (DCC::pom_read_cv (valuep, addr, cv))
+        rtc = DCC::pom_read_cv (valuep, addr, cv);
+        // printf ("pom_read_cv: addr=%d cv=%d rtc=%d\n", addr, cv, rtc);
+
+        if (rtc)
         {
-            rtc = true;
             break;
         }
     }
+
     sum_retries += tries;
     sum_reads++;
 
@@ -58,9 +61,10 @@ POM::pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv)
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- * pom_read_cv () - read values of N * 4 CVs
+ * pom_read_cv () - read values of n * 4 CVs
  *
- * cv begins with 0!
+ * cv begins with 0 and must be a multiple of 4.
+ * n is 1 .. 4 for reading 4, 8, 12, or 16 CVs
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
@@ -131,12 +135,14 @@ POM::pom_write_cv (uint_fast16_t addr, uint16_t cv, uint_fast8_t value, uint_fas
             if (val == value)
             {
                 rtc = true;
+                // printf ("pom_write_cv: nothing to do: addr=%d cv=%d value=%d val=%d\n", addr, cv, value, val);
             }
         }
     }
 
     if (! rtc)
     {
+        // printf ("pom_write_cv: addr=%d cv=%d value=%d\n", addr, cv, value);
         DCC::pom_write_cv (addr, cv, value);
 
         if (compare & POM_WRITE_COMPARE_AFTER_WRITE)
@@ -148,6 +154,7 @@ POM::pom_write_cv (uint_fast16_t addr, uint16_t cv, uint_fast8_t value, uint_fas
                     rtc = true;
                 }
             }
+            // printf ("pom_read_cv: val=%d\n", val);
         }
         else
         {

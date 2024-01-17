@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * event.h - event management functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,12 @@
 #define EVENT_TYPE_ADDON_FUNCTION       4
 #define EVENT_TYPE_WAIT_S88             5
 #define EVENT_TYPE_EXECUTE_LOCO_MACRO   6
+#define EVENT_TYPE_FREE1                7
+#define EVENT_TYPE_FREE2                8
+#define EVENT_TYPE_FREE3                9
+#define EVENT_TYPE_LED_SET_STATE        10
+#define EVENT_TYPE_SWITCH_SET_STATE     11
+#define EVENT_TYPE_SIGNAL_SET_STATE     12
 
 #define EVENT_SET_LOCO_SPEED            1
 #define EVENT_SET_LOCO_MIN_SPEED        2
@@ -73,6 +79,22 @@ typedef struct
             uint16_t    loco_idx;                                               // index of loco
             uint8_t     m;                                                      // macro index
         } loco_macro;
+        struct
+        {
+            uint16_t    led_group_idx;                                          // index of led
+            uint8_t     ledmask;                                                // led mask
+            uint8_t     ledon;                                                  // led on/off (1/0)
+        } led_state;
+        struct
+        {
+            uint16_t    swidx;                                                  // index of switch
+            uint8_t     swstate;                                                // switch state
+        } switch_state;
+        struct
+        {
+            uint16_t    sigidx;                                                 // index of signal
+            uint8_t     sigstate;                                               // signal state
+        } signal_state;
     };
 } EVENTS;
 
@@ -85,6 +107,11 @@ class Event
         static void                     add_event_addon_function (uint16_t tenths, uint_fast16_t addon_idx, uint_fast8_t f, bool b);
         static void                     add_event_wait_s88 (uint16_t tenths, uint_fast16_t coidx, uint_fast16_t loco_idx, uint_fast8_t speed, uint_fast16_t ramp);
         static void                     add_event_execute_loco_macro (uint16_t tenths, uint_fast16_t loco_idx, uint_fast8_t macroidx);
+
+        static void                     add_event_led_set_state (uint16_t tenths, uint_fast16_t led_group_idx, uint_fast8_t ledmask, uint_fast8_t ledon);
+        static void                     add_event_switch_set_state (uint16_t tenths, uint_fast16_t swidx, uint_fast8_t swstate);
+        static void                     add_event_signal_set_state (uint16_t tenths, uint_fast16_t sigidx, uint_fast8_t sigstate);
+
         static void                     delete_event_wait_s88 (uint_fast16_t loco_idx);
         static void                     schedule (void);
     private:
@@ -94,6 +121,9 @@ class Event
         static uint_fast16_t            get_free_slot_addon_function (uint16_t tenths, uint_fast16_t addon_idx, uint_fast8_t f, bool b);
         static uint_fast16_t            get_free_slot_wait_s88 (uint16_t tenths, uint_fast16_t coidx, uint_fast16_t loco_idx, uint_fast8_t speed, uint_fast16_t ramp);
         static uint_fast16_t            get_free_slot_execute_loco_macro (uint16_t tenths, uint_fast16_t loco_idx, uint_fast8_t macroidx);
+        static uint_fast16_t            get_free_slot_led_set_state (uint16_t tenths, uint_fast16_t led_group_idx, uint_fast8_t ledmask, uint_fast8_t ledon);
+        static uint_fast16_t            get_free_slot_switch_set_state (uint16_t tenths, uint_fast16_t swidx, uint_fast8_t swstate);
+        static uint_fast16_t            get_free_slot_signal_set_state (uint16_t tenths, uint_fast16_t sigidx, uint_fast8_t sigstate);
         static EVENTS                   event_buffer[EVENT_LEN];
         static uint_fast16_t            event_size;
 };

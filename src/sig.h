@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------------------------------------------------
- * switch.h - switch machine management functions
+ * sig.h - signal management functions
  *------------------------------------------------------------------------------------------------------------------------
  * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
@@ -17,31 +17,30 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *------------------------------------------------------------------------------------------------------------------------
  */
-#ifndef SWITCH_H
-#define SWITCH_H
+#ifndef SIG_H
+#define SIG_H
 
 #include <stdint.h>
 #include <string>
 #include <vector>
 #include <memory>
 
-#define MAX_SWITCHES            1024
+#define MAX_SIGNALS             1024
 
-#define SWITCH_ACTIVE_MASK      0x80                                        // flag: activate switch per DCC
-#define SWITCH_FLAG_3WAY        0x01
+#define SIG_ACTIVE_MASK         0x80                                        // flag: activate sig per DCC
 
-#define SWITCH_EVENT_LEN        64
+#define SIG_EVENT_LEN           64
 
 typedef struct
 {
-    uint_fast16_t               switch_idx;                                 // index of switch machine
+    uint_fast8_t                sig_idx;                                    // index of signal
     uint_fast8_t                mask;
-} SWITCH_EVENTS;
+} SIG_EVENTS;
 
-class Switch
+class Signal
 {
     public:
-                                        Switch ();
+                                        Signal ();
         void                            set_id (uint_fast16_t id);
 
         void                            set_name (std::string name);
@@ -52,33 +51,30 @@ class Switch
 
         void                            set_state (uint_fast8_t f);
         uint_fast8_t                    get_state ();
-        void                            set_flags (uint_fast8_t f);
-        uint_fast8_t                    get_flags ();
     private:
         uint16_t                        id;
         std::string                     name;
         uint16_t                        addr;
         uint8_t                         current_state;
-        uint8_t                         flags;
 };
 
-class Switches
+class Signals
 {
     public:
-        static std::vector<Switch>      switches;
+        static std::vector<Signal>      signals;
         static bool                     data_changed;
-        static uint_fast16_t            add (const Switch& new_switch);
+        static uint_fast16_t            add (const Signal& new_sig);
         static bool                     remove (uint_fast16_t swidx);
-        static uint_fast16_t            get_n_switches (void);
+        static uint_fast16_t            get_n_signals (void);
         static uint_fast16_t            set_new_id (uint_fast16_t swidx, uint_fast16_t new_swidx);
         static uint_fast16_t            schedule (void);
-        static void                     add_event (uint16_t switch_idx, uint_fast8_t mask);
+        static void                     add_event (uint16_t sig_idx, uint_fast8_t mask);
         static uint_fast8_t             booster_on (void);
         static uint_fast8_t             booster_off (void);
     private:
-        static uint_fast16_t            n_switches;                                 // number of switches
+        static uint_fast16_t            n_signals;                                  // number of signals
         static void                     renumber();
-        static SWITCH_EVENTS            events[SWITCH_EVENT_LEN];                   // event ringbuffer
+        static SIG_EVENTS               events[SIG_EVENT_LEN];                      // event ringbuffer
         static uint_fast16_t            event_size;                                 // current event size
         static uint_fast16_t            event_start;                                // current event start index
         static uint_fast16_t            event_stop;                                 // current event stop index

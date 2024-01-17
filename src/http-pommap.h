@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * http-pommap.h - HTTP POM function mapping routines
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,9 +29,11 @@ class HTTP_POMMAP
         static void     action_setcondmapesu (void);
         static void     action_setoutputmapesu (void);
         static void     action_setoutputmaplenz (void);
+        static void     action_setoutputmapzimo (void);
         static void     action_setoutputmaptams (void);
         static void     action_savemapesu (void);
         static void     action_savemaplenz (void);
+        static void     action_savemapzimo (void);
         static void     action_savemaptams (void);
     private:
 };

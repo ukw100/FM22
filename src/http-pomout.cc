@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * http-pomout.cc - HTTP POM function output routines
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,9 +66,9 @@ static const char * esu_output_modes[ESU_OUTPUT_MODES] =
 {
     "(aus)",                                        // 0
     "Dimmbares Licht",                              // 1
-    "Dimmbares Licht (auf/abblendbar)",            // 2
+    "Dimmbares Licht (auf/abblendbar)",             // 2
     "Feuerb&uuml;chse",                             // 3
-    "Intelligente Feuerbüche",                      // 4
+    "Intelligente Feuerb&uuml;chse",                // 4
     "Single Strobe",                                // 5
     "Double Strobe",                                // 6
     "Rotary Beacon",                                // 7
@@ -87,13 +87,13 @@ static const char * esu_output_modes[ESU_OUTPUT_MODES] =
     "(20 unbekannt)",                               // 20
     "ESU Kupplung 1+2 (Kompatibilit&auml;t)",       // 21
     "Raucherzeuger (Soundgesteuert)",               // 22
-    "Lüfterfunktion (Ventilator)",                  // 23
-    "Seuthe® Rauchgenerator",                       // 24
+    "L&uuml;fterfunktion (Ventilator)",             // 23
+    "Seuthe&#174; Rauchgenerator",                  // 24
     "Reserviert",                                   // 25
     "Reserviert",                                   // 26
     "Servo",                                        // 27
     "Konventionelle Kupplungsfunktion",             // 28
-    "ROCO® Kupplungsfunktion",                      // 29
+    "ROCO&#174; Kupplungsfunktion",                 // 29
     "Pantographensteuerung",                        // 30
     "PowerPack Control",                            // 31
 };
@@ -257,8 +257,10 @@ print_esu_output_modes (void)
 
     HTTP::response += (String) std::to_string (num_reads) + " CV-Werte gelesen per XPOM, dabei mussten " + std::to_string(read_retries) + " Lesevorg&auml;nge wiederholt werden. \r\n";
     HTTP::response += (String) "Ben&ouml;tigte Zeit: " + std::to_string(time_reads) + " sec<BR>\r\n";;
-    HTTP::response += (String) "<table style='border:1px solid gray'>\r\n";
-    HTTP::response += (String) "<tr><th align='right'>Ausgang</th><th>Mode</th><th>EV</th><th>AV</th><th>AutoAb</th><th>Hell</th></tr>\r\n";
+
+    HTTP::response += (String)
+        "<table style='border:1px solid gray'>\r\n"
+        "<tr><th align='right'>Ausgang</th><th>Mode</th><th>EV</th><th>AV</th><th>AutoAb</th><th>Hell</th></tr>\r\n";
 
     for (line = 0; line < ESU_OUTPUT_LINES; line++)
     {
@@ -286,14 +288,14 @@ print_esu_output_modes (void)
         HTTP::response += (String) "</td></tr>\r\n";
     }
 
-    HTTP::response += (String) "</table><P>\r\n";
-
-    HTTP::response += (String) "<table>\r\n";
-    HTTP::response += (String) "<tr><td>EV</td><td>Einschaltverz&ouml;gerung</td>\r\n";
-    HTTP::response += (String) "<tr><td>AV</td><td>Ausschaltverz&ouml;gerung</td>\r\n";
-    HTTP::response += (String) "<tr><td>AutoAb</td><td>Automatische Abschaltung</td>\r\n";
-    HTTP::response += (String) "<tr><td>Hell</td><td>Helligkeit</td>\r\n";
-    HTTP::response += (String) "</table>\r\n";
+    HTTP::response += (String)
+        "</table><P>\r\n"
+        "<table>\r\n"
+        "<tr><td>EV</td><td>Einschaltverz&ouml;gerung</td>\r\n"
+        "<tr><td>AV</td><td>Ausschaltverz&ouml;gerung</td>\r\n"
+        "<tr><td>AutoAb</td><td>Automatische Abschaltung</td>\r\n"
+        "<tr><td>Hell</td><td>Helligkeit</td>\r\n"
+        "</table>\r\n";
 }
 
 static bool
@@ -412,33 +414,35 @@ HTTP_POMOUT::handle_pomout (void)
         }
     }
 
-    HTTP::response += (String) "<div id='isoff' style='display:none'><font color='red'>Booster ist abgeschaltet. Bitte einschalten.</font></div>\r\n";
-    HTTP::response += (String) "<div id='ison' style='display:none'>\r\n";
+    HTTP::response += (String)
+        "<div id='isoff' style='display:none'><font color='red'>Booster ist abgeschaltet. Bitte einschalten.</font></div>\r\n"
+        "<div id='ison' style='display:none'>\r\n";
 
     if (manu)
     {
-        HTTP::response += (String) "<BR><div style='border:1px lightgray solid;margin-left:10px;display:inline-block;'>";
-        HTTP::response += (String) "<div style='padding:4px;text-align:center;background-color:#E0E0E0;'><B>Ausg&auml;nge</B></div>\r\n";
-        HTTP::response += (String) "<form method='GET' action='" + url + "'>\r\n";
-        HTTP::response += (String) "<div style='padding:2px;'><span style='width:120px;display:inline-block;'>Adresse: " + saddr + "</span>";
-        HTTP::response += (String) "<span style='width:110px;display:inline-block;'><a href='" + url + "'>Andere Adresse</a></span></div>\r\n";
-
-        HTTP::response += (String) "<div style='padding:2px;'><span style='width:100%'>";
-        HTTP::response += (String) "<input type='hidden' name='action' value='getout'>";
-        HTTP::response += (String) "<input type='hidden' name='manu' value='" + std::to_string(manu) + "'>";
-        HTTP::response += (String) "<input type='hidden' name='addr' value='" + saddr + "'>";
-        HTTP::response += (String) "<input type='submit' style='width:100%;padding:2px;' value='Ausg&auml;nge lesen'></span></div>\r\n";
-        HTTP::response += (String) "</form></div>\r\n";
+        HTTP::response += (String)
+            "<BR><div style='border:1px lightgray solid;margin-left:10px;display:inline-block;'>"
+            "<div style='padding:4px;text-align:center;background-color:#E0E0E0;'><B>Ausg&auml;nge</B></div>\r\n"
+            "<form method='GET' action='" + url + "'>\r\n"
+            "<div style='padding:2px;'><span style='width:120px;display:inline-block;'>Adresse: " + saddr + "</span>"
+            "<span style='width:110px;display:inline-block;'><a href='" + url + "'>Andere Adresse</a></span></div>\r\n"
+            "<div style='padding:2px;'><span style='width:100%'>"
+            "<input type='hidden' name='action' value='getout'>"
+            "<input type='hidden' name='manu' value='" + std::to_string(manu) + "'>"
+            "<input type='hidden' name='addr' value='" + saddr + "'>"
+            "<input type='submit' style='width:100%;padding:2px;' value='Ausg&auml;nge lesen'></span></div>\r\n"
+            "</form></div>\r\n";
     }
     else
     {   
-        HTTP::response += (String) "<form method='GET' action='" + url + "'>\r\n";
-        HTTP::response += (String) "<BR><table style='border:1px lightgray solid;margin-left:10px;'><tr bgcolor='#E0E0E0'><th colspan='2'>Ausg&auml;nge</th></tr>\r\n";
-        HTTP::response += (String) "<tr><td>Adresse</td><td><input type='text' style='width:120px;' maxlength='4' name='addr' value='" + saddr + "'></td></tr>\r\n";
-        HTTP::response += (String) "<tr><td colspan='2' width='100%'><input type='hidden' name='action' value='getmanu'>\r\n";
-        HTTP::response += (String) "<input type='submit' style='width:100%' value='Hersteller ermitteln'></td></tr>\r\n";
-        HTTP::response += (String) "</table>\r\n";
-        HTTP::response += (String) "</form>\r\n";
+        HTTP::response += (String)
+            "<form method='GET' action='" + url + "'>\r\n"
+            "<BR><table style='border:1px lightgray solid;margin-left:10px;'><tr bgcolor='#E0E0E0'><th colspan='2'>Ausg&auml;nge</th></tr>\r\n"
+            "<tr><td>Adresse</td><td><input type='text' style='width:120px;' maxlength='4' name='addr' value='" + saddr + "'></td></tr>\r\n"
+            "<tr><td colspan='2' width='100%'><input type='hidden' name='action' value='getmanu'>\r\n"
+            "<input type='submit' style='width:100%' value='Hersteller ermitteln'></td></tr>\r\n"
+            "</table>\r\n"
+            "</form>\r\n";
     }
 
     HTTP::response += (String) "<P>\r\n";
@@ -448,28 +452,29 @@ HTTP_POMOUT::handle_pomout (void)
 
     if (manu == MANUFACTURER_ESU)
     {
-        HTTP::response += (String) "function chout(prefix,line) {\r\n";
-        HTTP::response += (String) "  var id = prefix + line;\r\n";
-        HTTP::response += (String) "  var value = document.getElementById(id).value;\r\n";
-        HTTP::response += (String) "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=setoutputesu&prefix=' + prefix + '&line=' + line + '&value=' + value);";
-        HTTP::response += (String) "  http.addEventListener('load',";
-        HTTP::response += (String) "    function(event) {\r\nvar text = http.responseText;\r\nif (http.status >= 200 && http.status < 300) {\r\n";
-        HTTP::response += (String) "      if (text == '0') {\r\ndocument.getElementById('saveesu').style.display = 'none'; } else {\r\ndocument.getElementById('saveesu').style.display = ''; }";
-        HTTP::response += (String) "  }});";
-        HTTP::response += (String) "  http.send (null);\r\n";
-        HTTP::response += (String) "}\r\n";
-        HTTP::response += (String) "function saveesu() {\r\n";
-        HTTP::response += (String) "  document.body.style.cursor = 'wait';";
-        HTTP::response += (String) "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=saveoutputesu&addr=" + saddr + "');\r\n";
-        HTTP::response += (String) "  http.addEventListener('load',";
-        HTTP::response += (String) "    function(event) {\r\n";
-        HTTP::response += (String) "      document.body.style.cursor = 'auto';\r\n";
-        HTTP::response += (String) "      var text = http.responseText; if (http.status >= 200 && http.status < 300) { ";
-        HTTP::response += (String) "      if (text == '0') { document.getElementById('saveesu').style.display = 'none'; } ";
-        HTTP::response += (String) "      else { document.getElementById('saveesu').style.display = ''; alert ('Schreibfehler') }";
-        HTTP::response += (String) "  }});";
-        HTTP::response += (String) "  http.send (null);\r\n";
-        HTTP::response += (String) "}\r\n";
+        HTTP::response += (String)
+            "function chout(prefix,line) {\r\n"
+            "  var id = prefix + line;\r\n"
+            "  var value = document.getElementById(id).value;\r\n"
+            "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=setoutputesu&prefix=' + prefix + '&line=' + line + '&value=' + value);"
+            "  http.addEventListener('load',"
+            "    function(event) {\r\nvar text = http.responseText;\r\nif (http.status >= 200 && http.status < 300) {\r\n"
+            "      if (text == '0') {\r\ndocument.getElementById('saveesu').style.display = 'none'; } else {\r\ndocument.getElementById('saveesu').style.display = ''; }"
+            "  }});"
+            "  http.send (null);\r\n"
+            "}\r\n"
+            "function saveesu() {\r\n"
+            "  document.body.style.cursor = 'wait';"
+            "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=saveoutputesu&addr=" + saddr + "');\r\n"
+            "  http.addEventListener('load',"
+            "    function(event) {\r\n"
+            "      document.body.style.cursor = 'auto';\r\n"
+            "      var text = http.responseText; if (http.status >= 200 && http.status < 300) { "
+            "      if (text == '0') { document.getElementById('saveesu').style.display = 'none'; } "
+            "      else { document.getElementById('saveesu').style.display = ''; alert ('Schreibfehler') }"
+            "  }});"
+            "  http.send (null);\r\n"
+            "}\r\n";
     }
     else if (manu == MANUFACTURER_LENZ)
     {

@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * userio.cc - user i/o functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
 #include "railroad.h"
 #include "s88.h"
 #include "rcl.h"
+#include "led.h"
+#include "sig.h"
 #include "userio.h"
 
 /*-------------------------------------------------------------------------------------------------------------------------------------------
@@ -31,11 +33,13 @@
 void
 UserIO::booster_off (bool do_send_booster_cmd)
 {
+    Leds::booster_off ();
+    Signals::booster_off ();
     RCL::booster_off ();
     S88::booster_off ();
-    Railroad::booster_off ();
-    Switch::booster_off ();
-    Loco::booster_off (do_send_booster_cmd);
+    RailroadGroups::booster_off ();
+    Switches::booster_off ();
+    Locos::booster_off (do_send_booster_cmd);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------------------------
@@ -45,9 +49,11 @@ UserIO::booster_off (bool do_send_booster_cmd)
 void
 UserIO::booster_on (bool do_send_booster_cmd)
 {
-    Loco::booster_on (do_send_booster_cmd);
-    Switch::booster_on ();
-    Railroad::booster_on ();
+    Locos::booster_on (do_send_booster_cmd);
+    Switches::booster_on ();
+    RailroadGroups::booster_on ();
     S88::booster_on ();
     RCL::booster_on ();
+    Signals::booster_on ();
+    Leds::booster_on ();
 }

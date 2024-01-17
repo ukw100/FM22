@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------------------------------------------------
- * switch.h - switch machine management functions
+ * led.h - led management functions
  *------------------------------------------------------------------------------------------------------------------------
  * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
@@ -17,31 +17,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *------------------------------------------------------------------------------------------------------------------------
  */
-#ifndef SWITCH_H
-#define SWITCH_H
+#ifndef LED_H
+#define LED_H
 
 #include <stdint.h>
 #include <string>
 #include <vector>
 #include <memory>
 
-#define MAX_SWITCHES            1024
+#define MAX_LED_GROUPS                  256
+#define MAX_LEDS_PER_GROUP              8
 
-#define SWITCH_ACTIVE_MASK      0x80                                        // flag: activate switch per DCC
-#define SWITCH_FLAG_3WAY        0x01
-
-#define SWITCH_EVENT_LEN        64
-
-typedef struct
-{
-    uint_fast16_t               switch_idx;                                 // index of switch machine
-    uint_fast8_t                mask;
-} SWITCH_EVENTS;
-
-class Switch
+class LedGroup
 {
     public:
-                                        Switch ();
+                                        LedGroup ();
         void                            set_id (uint_fast16_t id);
 
         void                            set_name (std::string name);
@@ -50,38 +40,30 @@ class Switch
         void                            set_addr (uint_fast16_t addr);
         uint_fast16_t                   get_addr ();
 
-        void                            set_state (uint_fast8_t f);
+        void                            set_state (uint_fast8_t led_mask);
+        void                            set_state (uint_fast8_t led_mask, uint_fast8_t on);
         uint_fast8_t                    get_state ();
-        void                            set_flags (uint_fast8_t f);
-        uint_fast8_t                    get_flags ();
     private:
         uint16_t                        id;
         std::string                     name;
         uint16_t                        addr;
-        uint8_t                         current_state;
-        uint8_t                         flags;
+        uint8_t                        current_state_mask;
 };
 
-class Switches
+class Leds
 {
     public:
-        static std::vector<Switch>      switches;
+        static std::vector<LedGroup>    led_groups;
         static bool                     data_changed;
-        static uint_fast16_t            add (const Switch& new_switch);
-        static bool                     remove (uint_fast16_t swidx);
-        static uint_fast16_t            get_n_switches (void);
-        static uint_fast16_t            set_new_id (uint_fast16_t swidx, uint_fast16_t new_swidx);
-        static uint_fast16_t            schedule (void);
-        static void                     add_event (uint16_t switch_idx, uint_fast8_t mask);
+        static uint_fast16_t            add (const LedGroup& new_led_group);
+        static bool                     remove (uint_fast16_t led_group_idx);
+        static uint_fast16_t            get_n_led_groups (void);
+        static uint_fast16_t            set_new_id (uint_fast16_t led_group_idx, uint_fast16_t new_led_group_idx);
         static uint_fast8_t             booster_on (void);
         static uint_fast8_t             booster_off (void);
     private:
-        static uint_fast16_t            n_switches;                                 // number of switches
+        static uint_fast16_t            n_led_groups;                           // number of led groups
         static void                     renumber();
-        static SWITCH_EVENTS            events[SWITCH_EVENT_LEN];                   // event ringbuffer
-        static uint_fast16_t            event_size;                                 // current event size
-        static uint_fast16_t            event_start;                                // current event start index
-        static uint_fast16_t            event_stop;                                 // current event stop index
 };
 
 #endif

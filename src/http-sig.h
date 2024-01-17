@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------------------------------------------------
- * http-pom.h - HTTP POM routines
+ * http-sig.h - HTTP sig routines
  *------------------------------------------------------------------------------------------------------------------------
  * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
@@ -17,17 +17,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *------------------------------------------------------------------------------------------------------------------------
  */
-#ifndef HTTP_POM_H
-#define HTTP_POM_H
+#ifndef HTTP_SIG_H
+#define HTTP_SIG_H
 
 #include <stdint.h>
 
-class HTTP_POM
+class HTTP_Signal
 {
     public:
-        static void     handle_pominfo (void);
-        static void     handle_pomaddr (void);
-        static void     handle_pomcv (void);
+        static void     handle_sig (void);
+        static void     handle_sig_test (void);
+        static void     action_setsig (void);
+        static void     action_sig (void);
     private:
 };
 

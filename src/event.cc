@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * event.cc - event management functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,12 @@
 #include "millis.h"
 #include "event.h"
 #include "loco.h"
+#include "led.h"
 #include "addon.h"
+#include "switch.h"
+#include "sig.h"
 #include "s88.h"
+#include "debug.h"
 
 EVENTS                  Event::event_buffer[EVENT_LEN];                             // event ringbuffer
 uint_fast16_t           Event::event_size      = 0;                                 // current event size
@@ -76,7 +80,7 @@ Event::get_free_slot_loco_function (uint16_t tenths, uint_fast16_t loco_idx, uin
             }
             else
             {
-                printf ("Internal error in get_free_slot_loco_function(), idx=%u\n", (unsigned int) idx);
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_loco_function(), idx=%u\n", (unsigned int) idx);
             }
         }
     }
@@ -133,7 +137,7 @@ Event::get_free_slot_loco_speed (uint16_t tenths, uint_fast16_t loco_idx, uint_f
             }
             else
             {
-                printf ("Internal error in get_free_slot_loco_speed(), idx=%u\n", (unsigned int) idx);
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_loco_speed(), idx=%u\n", (unsigned int) idx);
             }
         }
     }
@@ -188,7 +192,7 @@ Event::get_free_slot_loco_dir (uint16_t tenths, uint_fast16_t loco_idx, uint_fas
             }
             else
             {
-                printf ("Internal error in get_free_slot_loco_dir(), idx=%u\n", (unsigned int) idx);
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_loco_dir(), idx=%u\n", (unsigned int) idx);
             }
         }
     }
@@ -244,7 +248,7 @@ Event::get_free_slot_addon_function (uint16_t tenths, uint_fast16_t addon_idx, u
             }
             else
             {
-                printf ("Internal error in get_free_slot_addon_function(), idx=%u\n", (unsigned int) idx);
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_addon_function(), idx=%u\n", (unsigned int) idx);
             }
         }
     }
@@ -301,7 +305,7 @@ Event::get_free_slot_wait_s88 (uint16_t tenths, uint_fast16_t coidx, uint_fast16
             }
             else
             {
-                printf ("Internal error in get_free_slot_wait_s88(), idx=%u\n", (unsigned int) idx);
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_wait_s88(), idx=%u\n", (unsigned int) idx);
             }
         }
     }
@@ -356,7 +360,7 @@ Event::get_free_slot_execute_loco_macro (uint16_t tenths, uint_fast16_t loco_idx
             }
             else
             {
-                printf ("Internal error in get_free_slot_loco_macro(), idx=%u\n", (unsigned int) idx);
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_loco_macro(), idx=%u\n", (unsigned int) idx);
             }
         }
     }
@@ -504,7 +508,7 @@ Event::delete_event_wait_s88 (uint_fast16_t loco_idx)
         {
             Event::event_buffer[idx].millis = 0;
             Event::event_size--;
-            Loco::reset_flag_halt (loco_idx);
+            Locos::locos[loco_idx].reset_flag_halt ();
             break;
         }
 
@@ -570,6 +574,260 @@ Event::add_event_execute_loco_macro (uint16_t tenths, uint_fast16_t loco_idx, ui
     }
 }
 
+uint_fast16_t
+Event::get_free_slot_switch_set_state (uint16_t tenths, uint_fast16_t swidx, uint_fast8_t swstate)
+{
+    uint_fast16_t   idx;
+    uint_fast16_t   empty_idx   = 0xFFFF;
+    uint_fast16_t   len         = Event::event_size;
+    uint_fast16_t   rtc         = 0xFFFF;
+
+    for (idx = 0; len > 0 && idx < EVENT_LEN; idx++)
+    {
+        if (Event::event_buffer[idx].millis == 0)
+        {
+            if (empty_idx == 0xFFFF)
+            {
+                empty_idx = idx;
+            }
+        }
+        else
+        {
+            if (Event::event_buffer[idx].tenths == tenths && Event::event_buffer[idx].type == EVENT_TYPE_SWITCH_SET_STATE)        // find double entry...
+            {
+                if (Event::event_buffer[idx].switch_state.swidx == swidx &&
+                    Event::event_buffer[idx].switch_state.swstate == swstate)
+                {
+                    rtc = idx;
+                    break;
+                }
+            }
+
+            len--;
+        }
+    }
+
+    if (rtc == 0xFFFF)
+    {
+        if (empty_idx != 0xFFFF)
+        {
+            rtc = empty_idx;
+        }
+        else if (idx < EVENT_LEN)
+        {
+            if (Event::event_buffer[idx].millis == 0)
+            {
+                rtc = idx;
+            }
+            else
+            {
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_illu_macro(), idx=%u\n", (unsigned int) idx);
+            }
+        }
+    }
+
+    return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * add_event_switch_set_state () - add switch event
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Event::add_event_switch_set_state (uint16_t tenths, uint_fast16_t swidx, uint_fast8_t swstate)
+{
+    uint_fast16_t idx;
+
+    if (Event::event_size < EVENT_LEN)                                              // buffer full?
+    {                                                                               // no
+        idx = Event::get_free_slot_switch_set_state (tenths, swidx, swstate);
+
+        if (idx < EVENT_LEN)
+        {
+            if (Event::event_buffer[idx].millis == 0)
+            {
+                Event::event_size++;
+            }
+
+            Event::event_buffer[idx].millis                 = Millis::elapsed () + 100 * tenths;
+            Event::event_buffer[idx].tenths                 = tenths;
+            Event::event_buffer[idx].type                   = EVENT_TYPE_SWITCH_SET_STATE;
+            Event::event_buffer[idx].switch_state.swidx     = swidx;
+            Event::event_buffer[idx].switch_state.swstate   = swstate;
+        }
+    }
+}
+
+uint_fast16_t
+Event::get_free_slot_signal_set_state (uint16_t tenths, uint_fast16_t sigidx, uint_fast8_t sigstate)
+{
+    uint_fast16_t   idx;
+    uint_fast16_t   empty_idx   = 0xFFFF;
+    uint_fast16_t   len         = Event::event_size;
+    uint_fast16_t   rtc         = 0xFFFF;
+
+    for (idx = 0; len > 0 && idx < EVENT_LEN; idx++)
+    {
+        if (Event::event_buffer[idx].millis == 0)
+        {
+            if (empty_idx == 0xFFFF)
+            {
+                empty_idx = idx;
+            }
+        }
+        else
+        {
+            if (Event::event_buffer[idx].tenths == tenths && Event::event_buffer[idx].type == EVENT_TYPE_SIGNAL_SET_STATE)        // find double entry...
+            {
+                if (Event::event_buffer[idx].signal_state.sigidx == sigidx &&
+                    Event::event_buffer[idx].signal_state.sigstate == sigstate)
+                {
+                    rtc = idx;
+                    break;
+                }
+            }
+
+            len--;
+        }
+    }
+
+    if (rtc == 0xFFFF)
+    {
+        if (empty_idx != 0xFFFF)
+        {
+            rtc = empty_idx;
+        }
+        else if (idx < EVENT_LEN)
+        {
+            if (Event::event_buffer[idx].millis == 0)
+            {
+                rtc = idx;
+            }
+            else
+            {
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_signal_set_state(), idx=%u\n", (unsigned int) idx);
+            }
+        }
+    }
+
+    return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * add_event_signal_set_state () - add signal event
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Event::add_event_signal_set_state (uint16_t tenths, uint_fast16_t sigidx, uint_fast8_t sigstate)
+{
+    uint_fast16_t idx;
+
+    if (Event::event_size < EVENT_LEN)                                              // buffer full?
+    {                                                                               // no
+        idx = Event::get_free_slot_signal_set_state (tenths, sigidx, sigstate);
+
+        if (idx < EVENT_LEN)
+        {
+            if (Event::event_buffer[idx].millis == 0)
+            {
+                Event::event_size++;
+            }
+
+            Event::event_buffer[idx].millis                 = Millis::elapsed () + 100 * tenths;
+            Event::event_buffer[idx].tenths                 = tenths;
+            Event::event_buffer[idx].type                   = EVENT_TYPE_SIGNAL_SET_STATE;
+            Event::event_buffer[idx].signal_state.sigidx    = sigidx;
+            Event::event_buffer[idx].signal_state.sigstate  = sigstate;
+        }
+    }
+}
+
+uint_fast16_t
+Event::get_free_slot_led_set_state (uint16_t tenths, uint_fast16_t led_group_idx, uint_fast8_t ledmask, uint_fast8_t ledon)
+{
+    uint_fast16_t   idx;
+    uint_fast16_t   empty_idx   = 0xFFFF;
+    uint_fast16_t   len         = Event::event_size;
+    uint_fast16_t   rtc         = 0xFFFF;
+
+    for (idx = 0; len > 0 && idx < EVENT_LEN; idx++)
+    {
+        if (Event::event_buffer[idx].millis == 0)
+        {
+            if (empty_idx == 0xFFFF)
+            {
+                empty_idx = idx;
+            }
+        }
+        else
+        {
+            if (Event::event_buffer[idx].tenths == tenths && Event::event_buffer[idx].type == EVENT_TYPE_LED_SET_STATE)        // find double entry...
+            {
+                if (Event::event_buffer[idx].led_state.led_group_idx == led_group_idx &&
+                    Event::event_buffer[idx].led_state.ledmask == ledmask &&
+                    Event::event_buffer[idx].led_state.ledon == ledon)
+                {
+                    rtc = idx;
+                    break;
+                }
+            }
+
+            len--;
+        }
+    }
+
+    if (rtc == 0xFFFF)
+    {
+        if (empty_idx != 0xFFFF)
+        {
+            rtc = empty_idx;
+        }
+        else if (idx < EVENT_LEN)
+        {
+            if (Event::event_buffer[idx].millis == 0)
+            {
+                rtc = idx;
+            }
+            else
+            {
+                Debug::printf (DEBUG_LEVEL_NONE, "Internal error in get_free_slot_led_set_state, idx=%u\n", (unsigned int) idx);
+            }
+        }
+    }
+
+    return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * add_event_led_set_state () - add led event
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Event::add_event_led_set_state (uint16_t tenths, uint_fast16_t led_group_idx, uint_fast8_t ledmask, uint_fast8_t ledon)
+{
+    uint_fast16_t idx;
+
+    if (Event::event_size < EVENT_LEN)                                              // buffer full?
+    {                                                                               // no
+        idx = Event::get_free_slot_led_set_state (tenths, led_group_idx, ledmask, ledon);
+
+        if (idx < EVENT_LEN)
+        {
+            if (Event::event_buffer[idx].millis == 0)
+            {
+                Event::event_size++;
+            }
+
+            Event::event_buffer[idx].millis                     = Millis::elapsed () + 100 * tenths;
+            Event::event_buffer[idx].tenths                     = tenths;
+            Event::event_buffer[idx].type                       = EVENT_TYPE_LED_SET_STATE;
+            Event::event_buffer[idx].led_state.led_group_idx    = led_group_idx;
+            Event::event_buffer[idx].led_state.ledmask          = ledmask;
+            Event::event_buffer[idx].led_state.ledon            = ledon;
+        }
+    }
+}
+
 /*------------------------------------------------------------------------------------------------------------------------
  * schedule_events() - schedule events
  *------------------------------------------------------------------------------------------------------------------------
@@ -593,13 +851,15 @@ Event::schedule (void)
                 {
                     case EVENT_TYPE_LOCO_FUNCTION:
                     {
+                        uint_fast16_t loco_idx = Event::event_buffer[idx].loco_func.loco_idx;
+
                         if (Event::event_buffer[idx].loco_func.f == 0xFF)
                         {
-                            Loco::reset_functions (Event::event_buffer[idx].loco_func.loco_idx);
+                            Locos::locos[loco_idx].reset_functions ();
                         }
                         else
                         {
-                            Loco::set_function (Event::event_buffer[idx].loco_func.loco_idx, Event::event_buffer[idx].loco_func.f, Event::event_buffer[idx].loco_func.b);
+                            Locos::locos[loco_idx].set_function (Event::event_buffer[idx].loco_func.f, Event::event_buffer[idx].loco_func.b);
                         }
                         break;
                     }
@@ -617,26 +877,26 @@ Event::schedule (void)
                             {
                                 case EVENT_SET_LOCO_SPEED:
                                 {
-                                    Loco::set_speed (loco_idx, speed, tenths);
+                                    Locos::locos[loco_idx].set_speed (speed, tenths);
                                     break;
                                 }
                                 case EVENT_SET_LOCO_MIN_SPEED:
                                 {
-                                    uint_fast8_t current_speed = Loco::get_speed (loco_idx);
+                                    uint_fast8_t current_speed = Locos::locos[loco_idx].get_speed ();
 
                                     if (current_speed < speed)
                                     {
-                                        Loco::set_speed (loco_idx, speed, tenths);
+                                        Locos::locos[loco_idx].set_speed (speed, tenths);
                                     }
                                     break;
                                 }
                                 case EVENT_SET_LOCO_MAX_SPEED:
                                 {
-                                    uint_fast8_t current_speed = Loco::get_speed (loco_idx);
+                                    uint_fast8_t current_speed = Locos::locos[loco_idx].get_speed ();
 
                                     if (current_speed > speed)
                                     {
-                                        Loco::set_speed (loco_idx, speed, tenths);
+                                        Locos::locos[loco_idx].set_speed (speed, tenths);
                                     }
                                     break;
                                 }
@@ -653,7 +913,7 @@ Event::schedule (void)
 
                         if (loco_idx != 0xFFFF)
                         {
-                            Loco::set_fwd (loco_idx, fwd);
+                            Locos::locos[loco_idx].set_fwd (fwd);
                         }
 
                         break;
@@ -661,13 +921,15 @@ Event::schedule (void)
 
                     case EVENT_TYPE_ADDON_FUNCTION:
                     {
+                        uint_fast16_t addon_idx = Event::event_buffer[idx].addon_func.addon_idx;
+
                         if (Event::event_buffer[idx].addon_func.f == 0xFF)
                         {
-                            AddOn::reset_functions (Event::event_buffer[idx].addon_func.addon_idx);
+                            AddOns::addons[addon_idx].reset_functions ();
                         }
                         else
                         {
-                            AddOn::set_function (Event::event_buffer[idx].addon_func.addon_idx, Event::event_buffer[idx].addon_func.f, Event::event_buffer[idx].addon_func.b);
+                            AddOns::addons[addon_idx].set_function (Event::event_buffer[idx].addon_func.f, Event::event_buffer[idx].addon_func.b);
                         }
                         break;
                     }
@@ -683,14 +945,14 @@ Event::schedule (void)
                         {
                             if (S88::get_state_bit (coidx) == S88_STATE_OCCUPIED)
                             {
-                                Loco::set_flag_halt (loco_idx);
+                                Locos::locos[loco_idx].set_flag_halt ();
                                 Event::event_buffer[idx].millis = current_millis + 100;                         // wait 100msec for next check
                                 do_delete_event = false;
                             }
                             else
                             {
-                                Loco::reset_flag_halt (loco_idx);
-                                Loco::set_speed (loco_idx, speed, tenths);
+                                Locos::locos[loco_idx].reset_flag_halt ();
+                                Locos::locos[loco_idx].set_speed (speed, tenths);
                             }
                         }
                         break;
@@ -703,11 +965,67 @@ Event::schedule (void)
 
                         if (loco_idx != 0xFFFF)
                         {
-                            Loco::execute_macro (loco_idx, macroidx);
+                            Locos::locos[loco_idx].execute_macro (macroidx);
                         }
 
                         break;
                     }
+
+                    case EVENT_TYPE_FREE1:
+                    {
+                        break;
+                    }
+
+                    case EVENT_TYPE_FREE2:
+                    {
+                        break;
+                    }
+
+                    case EVENT_TYPE_FREE3:
+                    {
+                        break;
+                    }
+
+                    case EVENT_TYPE_LED_SET_STATE:
+                    {
+                        uint_fast16_t   led_group_idx   = Event::event_buffer[idx].led_state.led_group_idx;
+                        uint_fast8_t    ledmask         = Event::event_buffer[idx].led_state.ledmask;
+                        uint_fast8_t    ledon           = Event::event_buffer[idx].led_state.ledon;
+
+                        if (led_group_idx != 0xFFFF)
+                        {
+                            Leds::led_groups[led_group_idx].set_state (ledmask, ledon);
+                        }
+
+                        break;
+                    }
+
+                    case EVENT_TYPE_SWITCH_SET_STATE:
+                    {
+                        uint_fast16_t   swidx       = Event::event_buffer[idx].switch_state.swidx;
+                        uint_fast8_t    swstate     = Event::event_buffer[idx].switch_state.swstate;
+
+                        if (swidx != 0xFFFF)
+                        {
+                            Switches::switches[swidx].set_state (swstate);
+                        }
+
+                        break;
+                    }
+
+                    case EVENT_TYPE_SIGNAL_SET_STATE:
+                    {
+                        uint_fast16_t   sigidx      = Event::event_buffer[idx].signal_state.sigidx;
+                        uint_fast8_t    sigstate    = Event::event_buffer[idx].signal_state.sigstate;
+
+                        if (sigidx != 0xFFFF)
+                        {
+                            Signals::signals[sigidx].set_state (sigstate);
+                        }
+
+                        break;
+                    }
+
                 }
 
                 if (do_delete_event)

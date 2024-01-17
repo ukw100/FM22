@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * http.cc - http server
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,25 +40,29 @@
 #include "http-common.h"
 #include "http-loco.h"
 #include "http-addon.h"
+#include "http-led.h"
 #include "http-switch.h"
+#include "http-sig.h"
 #include "http-railroad.h"
 #include "http-s88.h"
 #include "http-rcl.h"
 #include "http-pgm.h"
 #include "http-pom.h"
+#include "http-pommot.h"
 #include "http-pommap.h"
 #include "http-pomout.h"
+#include "loco.h"
 #include "stm32.h"
 #include "debug.h"
 #include "base.h"
 
 #define WRITE_CHUNK_SIZE        1024
 
-#define MAX_PARAMETERS          256
+#define MAX_PARAMETERS          2048
 #define MAX_PARAMETER_NAME_LEN  64
 #define MAX_PARAMETER_VALUE_LEN 256
 
-#define MAX_REQUEST_LEN         4096                                // 4 KB
+#define MAX_REQUEST_LEN         8096                                // 8 KB
 #define MAX_POST_LEN            131072                              // 128 KB
 
 #define METHOD_NONE             0
@@ -513,9 +517,10 @@ show_directory (const char * action, String url)
     {
         struct dirent * entry;
 
-        HTTP::response += (String) "<B>Directory:</B>\r\n";
-        HTTP::response += (String) "<table style='border:1px gray solid\'>\r\n";
-        HTTP::response += (String) "<tr bgcolor='#e0e0e0'><th width='120' align='left'>Dateiname</th><th>Gr&ouml;&szlig;e</th><th>Datum</th><th colspan='3'>Aktion</th></tr>\r\n";
+        HTTP::response += (String)
+            "<B>Directory:</B>\r\n"
+            "<table style='border:1px gray solid\'>\r\n"
+            "<tr bgcolor='#e0e0e0'><th width='120' align='left'>Dateiname</th><th>Gr&ouml;&szlig;e</th><th>Datum</th><th colspan='3'>Aktion</th></tr>\r\n";
  
         while ((entry = readdir (dirp)) != 0)
         {
@@ -534,49 +539,39 @@ show_directory (const char * action, String url)
 
                     sprintf (stime, "%04d-%02d-%02d %02d:%02d", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min);
 
-                    HTTP::response += (String) "<tr>";
-                    HTTP::response += (String) "<td nowrap>";
-                    HTTP::response += filename;
-                    HTTP::response += (String) "</td><td align='right'>";
-                    HTTP::response += std::to_string (st.st_size);
-                    HTTP::response += (String) "</td><td align='right' nowrap>";
-                    HTTP::response += stime;
-                    HTTP::response += (String) "</td>";
-
-                    HTTP::response += (String) "<td>\r\n";
-                    HTTP::response += (String) "<form action='";
-                    HTTP::response += url;
-                    HTTP::response += (String) "' method='GET'>\r\n";
-                    HTTP::response += (String) "  <input type='hidden' name='action' value='delete'>\r\n";
-                    HTTP::response += (String) "  <input type='hidden' name='fname'  value='";
-                    HTTP::response += filename;
-                    HTTP::response += (String) "'>\r\n";
-                    HTTP::response += (String) "  <input type='submit' value='Delete'>\r\n";
-                    HTTP::response += (String) "</form>\r\n";
-                    HTTP::response += (String) "</td>\r\n";
-
-                    HTTP::response += (String) "<td>\r\n";
-                    HTTP::response += (String) "<form action='";
-                    HTTP::response += url;
-                    HTTP::response += (String) "' method='GET'>\r\n";
-                    HTTP::response += (String) "  <input type='hidden' name='action' value='check'>\r\n";
-                    HTTP::response += (String) "  <input type='hidden' name='fname'  value='";
-                    HTTP::response += filename;
-                    HTTP::response += (String) "'>\r\n";
-                    HTTP::response += (String) "  <input type='submit' value='Check'>\r\n";
-                    HTTP::response += (String) "</form>\r\n";
-                    HTTP::response += (String) "</td>\r\n";
-
-                    HTTP::response += (String) "<td>\r\n";
-                    HTTP::response += (String) "<form action='/flash' method='GET'>\r\n";
-                    HTTP::response += (String) "  <input type='hidden' name='action' value='flash'>\r\n";
-                    HTTP::response += (String) "  <input type='hidden' name='fname'  value='";
-                    HTTP::response += filename;
-                    HTTP::response += (String) "'>\r\n";
-                    HTTP::response += (String) "  <input type='submit' value='Flash'>\r\n";
-                    HTTP::response += (String) "</form>\r\n";
-                    HTTP::response += (String) "</td>\r\n";
-                    HTTP::response += (String) "</tr>\r\n";
+                    HTTP::response += (String)
+                        "<tr>"
+                        "<td nowrap>" + filename +
+                        "</td><td align='right'>" + std::to_string (st.st_size) +
+                        "</td><td align='right' nowrap>" + stime +
+                        "</td>"
+                        "<td>\r\n"
+                        "<form action='" + url +
+                        "' method='GET'>\r\n"
+                        "  <input type='hidden' name='action' value='delete'>\r\n"
+                        "  <input type='hidden' name='fname'  value='" + filename +
+                        "'>\r\n"
+                        "  <input type='submit' value='Delete'>\r\n"
+                        "</form>\r\n"
+                        "</td>\r\n"
+                        "<td>\r\n"
+                        "<form action='" + url +
+                        "' method='GET'>\r\n"
+                        "  <input type='hidden' name='action' value='check'>\r\n"
+                        "  <input type='hidden' name='fname'  value='" + filename +
+                        "'>\r\n"
+                        "  <input type='submit' value='Check'>\r\n"
+                        "</form>\r\n"
+                        "</td>\r\n"
+                        "<td>\r\n"
+                        "<form action='/flash' method='GET'>\r\n"
+                        "  <input type='hidden' name='action' value='flash'>\r\n"
+                        "  <input type='hidden' name='fname'  value='" + filename +
+                        "'>\r\n"
+                        "  <input type='submit' value='Flash'>\r\n"
+                        "</form>\r\n"
+                        "</td>\r\n"
+                        "</tr>\r\n";
                 }
             }
         }
@@ -594,12 +589,13 @@ show_directory (const char * action, String url)
 static void
 print_upload_form (void)
 {
-    HTTP::response += (String) "<BR>\r\n";
-    HTTP::response += (String) "<form method='POST' action='/doupload' enctype='multipart/form-data'>\r\n";
-    HTTP::response += (String) "HEX-Datei hochladen:<br><br>\r\n";
-    HTTP::response += (String) "<input type='file' accept='.hex' name='file'>\r\n";
-    HTTP::response += (String) "<input type='submit' value='Upload'>\r\n";
-    HTTP::response += (String) "</form>\r\n";
+    HTTP::response += (String)
+        "<BR>\r\n"
+        "<form method='POST' action='/doupload' enctype='multipart/form-data'>\r\n"
+        "HEX-Datei hochladen:<br><br>\r\n"
+        "<input type='file' accept='.hex' name='file'>\r\n"
+        "<input type='submit' value='Upload'>\r\n"
+        "</form>\r\n";
 }
 
 #define REASON_NONE                 0
@@ -621,8 +617,9 @@ handle_doupload (void)
     bool            upload_successful   = false;
 
     HTTP_Common::html_header (title, title, url, true);
-    HTTP::response += (String) "<P>\r\n";
-    HTTP::response += (String) "<div style='margin-top:10px;margin-bottom:10px;margin-left:20px;padding:10px;border:1px lightgray solid;display:inline-block;'>\r\n";
+    HTTP::response += (String)
+        "<P>\r\n"
+        "<div style='margin-top:10px;margin-bottom:10px;margin-left:20px;padding:10px;border:1px lightgray solid;display:inline-block;'>\r\n";
 
     if (n_parameters > 0 && boundary)
     {
@@ -830,8 +827,7 @@ handle_flash (void)
     const char *    action  = HTTP::parameter ("action");
 
     HTTP_Common::html_header (title, title, url, true);
-    HTTP::response += (String) "<P>\r\n";
-    HTTP::response += (String) "<div style='margin-top:10px;margin-bottom:10px;margin-left:20px;padding:10px;border:1px lightgray solid;display:inline-block;'>\r\n";
+    HTTP::response += (String) "<P><div style='margin-top:10px;margin-bottom:10px;margin-left:20px;padding:10px;border:1px lightgray solid;display:inline-block;'>\r\n";
     HTTP_Common::add_action_handler ("head", "", 200, true);
 
     show_directory (action, url);
@@ -851,9 +847,10 @@ handle_flash (void)
             STM32::reset ();
         }
 
-        HTTP::response += (String) "<form method='GET' action='" + url + "'>\r\n";
-        HTTP::response += (String) "<P><button type='submit' name='action' value='reset'>Reset STM32</button>\r\n";
-        HTTP::response += (String) "</form>\r\n";
+        HTTP::response += (String)
+            "<form method='GET' action='" + url + "'>\r\n"
+            "<P><button type='submit' name='action' value='reset'>Reset STM32</button>\r\n"
+            "</form>\r\n";
     }
 
     HTTP::response += (String) "</div>\r\n";
@@ -873,7 +870,11 @@ handle_action (void)
 
     HTTP::response = "";
 
-    if (strcmp (action, "on") == 0)
+    if (strcmp (action, "estop") == 0)
+    {
+        Locos::estop ();
+    }
+    else if (strcmp (action, "on") == 0)
     {
         HTTP_Common::action_on ();
     }
@@ -883,7 +884,7 @@ handle_action (void)
     }
     else if (strcmp (action, "rstalert") == 0)
     {
-        HTTP::set_alert ((char *) 0);
+        HTTP::set_alert ("");
     }
     else if (strcmp (action, "head") == 0)
     {
@@ -892,6 +893,10 @@ handle_action (void)
     else if (strcmp (action, "locos") == 0)
     {
         HTTP_Loco::action_locos ();
+    }
+    else if (strcmp (action, "led") == 0)
+    {
+        HTTP_Led::action_led ();
     }
     else if (strcmp (action, "rr") == 0)
     {
@@ -925,6 +930,10 @@ handle_action (void)
     {
         HTTP_AddOn::action_togglefunctionaddon ();
     }
+    else if (strcmp (action, "setdestination") == 0)
+    {
+        HTTP_Loco::action_setdestination ();
+    }
     else if (strcmp (action, "loco") == 0)
     {
         HTTP_Loco::action_loco ();
@@ -937,6 +946,10 @@ handle_action (void)
     {
         HTTP_AddOn::action_getfa ();
     }
+    else if (strcmp (action, "setled") == 0)
+    {
+        HTTP_Led::action_setled ();
+    }
     else if (strcmp (action, "setsw") == 0)
     {
         HTTP_Switch::action_setsw ();
@@ -944,6 +957,14 @@ handle_action (void)
     else if (strcmp (action, "switch") == 0)
     {
         HTTP_Switch::action_switch ();
+    }
+    else if (strcmp (action, "setsig") == 0)
+    {
+        HTTP_Signal::action_setsig ();
+    }
+    else if (strcmp (action, "sig") == 0)
+    {
+        HTTP_Signal::action_sig ();
     }
     else if (strcmp (action, "rrset") == 0)
     {
@@ -961,6 +982,10 @@ handle_action (void)
     {
         HTTP_POMMAP::action_setoutputmaplenz ();
     }
+    else if (strcmp (action, "setoutputmapzimo") == 0)
+    {
+        HTTP_POMMAP::action_setoutputmapzimo ();
+    }
     else if (strcmp (action, "setoutputmaptams") == 0)
     {
         HTTP_POMMAP::action_setoutputmaptams ();
@@ -972,6 +997,10 @@ handle_action (void)
     else if (strcmp (action, "savemaplenz") == 0)
     {
         HTTP_POMMAP::action_savemaplenz ();
+    }
+    else if (strcmp (action, "savemapzimo") == 0)
+    {
+        HTTP_POMMAP::action_savemapzimo ();
     }
     else if (strcmp (action, "savemaptams") == 0)
     {
@@ -994,6 +1023,176 @@ handle_action (void)
     http_puts (HTTP::response);
 }
 
+static void
+print_style_hide (void)
+{
+    HTTP::response += (String)
+        "button, input[type=button], input[type=submit], input[type=reset] { background-color: #EEEEEE; border: 1px solid #AAAAEE; }\r\n"
+        "button:hover, input[type=button]:hover, input[type=submit]:hover, input[type=reset] { background-color: #DDDDDD; }\r\n"
+        "@media screen and (max-width: 1000px) { .hide1000 { display:none; }}\r\n"
+        "@media screen and (max-width: 1200px) { .hide1200 { display:none; }}\r\n"
+        "@media screen and (max-width: 1800px) { .hide1800 { display:none; }}\r\n";
+}
+
+static void
+print_iframe_buttons (void)
+{
+    HTTP::response += (String)
+        "<script>\r\n"
+        "function estop()"
+        "{"
+        "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=estop'); http.send (null);"
+        "  document.getElementById('estop').style.color = 'white';"
+        "  document.getElementById('estop').style.backgroundColor = 'red';"
+        "  setTimeout(function()"
+        "  {"
+        "    document.getElementById('estop').style.color = '';"
+        "    document.getElementById('estop').style.backgroundColor = '';"
+        "  }, 500);"
+        "}\r\n"
+        "window.onkeyup = function (event) { if (event.keyCode == 27) { estop(); }}\r\n"
+        "</script>\r\n"
+        "<button class='estop' id='estop' onclick='estop()'>STOP</font></button><BR>\r\n"
+        "<button onclick=\"window.location.href='/';\">1</button>\r\n"
+        "<button class='hide1200' onclick=\"window.location.href='/2';\">2</button>\r\n"
+        "<button class='hide1800' onclick=\"window.location.href='/3';\">3</button>\r\n"
+        "<button class='hide1200' onclick=\"window.location.href='/4';\">4</button>\r\n"
+        "<button class='hide1800' onclick=\"window.location.href='/6';\">6</button>\r\n";
+}
+
+static void
+print_iframe_x_header_pre (void)
+{
+    HTTP::response = (String)
+        "<!DOCTYPE html>\r\n"
+        "<html>\r\n"
+        "<head>\r\n"
+        "<meta charset='UTF-8'>"
+        "<title>DCC FM22</title>\r\n"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'/>\r\n";
+}
+
+static void
+print_iframe_x_header_post (void)
+{
+    HTTP::response += (String)
+        "</head>\r\n";
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------
+ * handle_iframe2 ()
+ *----------------------------------------------------------------------------------------------------------------------------------------
+ */
+static void
+handle_iframe2 (void)
+{
+    print_iframe_x_header_pre ();
+    HTTP::response += (String)
+        "<style>\r\n"
+        "div { height:100%; width:100%; }"
+        "span { display:inline-block; width:50%; }"
+        "iframe { height:96vh; width:100%; border: 1px dotted gray; }"
+        ".estop { width:100%; height:32px; color:red; }\r\n"
+        ".estop:hover { color:white; background-color:red; }\r\n";
+    print_style_hide ();
+    HTTP::response += (String)
+        "</style>\r\n";
+    print_iframe_x_header_post ();
+    print_iframe_buttons ();
+
+    HTTP::response += (String)
+        "<div><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span></div>"
+        "</body></html>\r\n";
+
+    HTTP::flush ();
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------
+ * handle_iframe3 ()
+ *----------------------------------------------------------------------------------------------------------------------------------------
+ */
+static void
+handle_iframe3 (void)
+{
+    print_iframe_x_header_pre ();
+    HTTP::response += (String)
+        "<style>\r\n"
+        "div { height:100%; width:100%; }"
+        "span { display:inline-block; width:33%; }"
+        "iframe { height:96vh; width:100%; border: 1px dotted gray; }"
+        ".estop { width:100%; height:32px; color:red; }\r\n"
+        ".estop:hover { color:white; background-color:red; }\r\n";
+    print_style_hide ();
+    HTTP::response += (String)
+        "</style>\r\n";
+    print_iframe_x_header_post ();
+    print_iframe_buttons ();
+
+    HTTP::response += (String)
+        "<div><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span></div>"
+        "</body></html>\r\n";
+
+    HTTP::flush ();
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------
+ * handle_iframe4 ()
+ *----------------------------------------------------------------------------------------------------------------------------------------
+ */
+static void
+handle_iframe4 (void)
+{
+    print_iframe_x_header_pre ();
+    HTTP::response += (String)
+        "<style>\r\n"
+        "div { height:50%; width:100%; }"
+        "span { display:inline-block; width:50%; }"
+        "iframe { height:48vh; width:100%; border: 1px dotted gray; }"
+        ".estop { width:100%; height:32px; color:red; }\r\n"
+        ".estop:hover { color:white; background-color:red; }\r\n";
+    print_style_hide ();
+    HTTP::response += (String)
+        "</style>\r\n";
+    print_iframe_x_header_post ();
+    print_iframe_buttons ();
+
+    HTTP::response += (String)
+        "<div><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span></div>"
+        "<div><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span></div>"
+        "</body></html>\r\n";
+
+    HTTP::flush ();
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------
+ * handle_iframe6 ()
+ *----------------------------------------------------------------------------------------------------------------------------------------
+ */
+static void
+handle_iframe6 (void)
+{
+    print_iframe_x_header_pre ();
+    HTTP::response += (String)
+        "<style>\r\n"
+        "div { height:50%; width:100%; }"
+        "span { display:inline-block; width:33%; }"
+        "iframe { height:48vh; width:100%; border: 1px dotted gray; }"
+        ".estop { width:100%; height:32px; color:red; }\r\n"
+        ".estop:hover { color:white; background-color:red; }\r\n";
+    print_style_hide ();
+    HTTP::response += (String)
+        "</style>\r\n";
+    print_iframe_x_header_post ();
+    print_iframe_buttons ();
+
+    HTTP::response += (String)
+        "<div><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span></div>"
+        "<div><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span><span><iframe src='/'></iframe></span></div>"
+        "</body></html>\r\n";
+
+    HTTP::flush ();
+}
+
 /*----------------------------------------------------------------------------------------------------------------------------------------
  * handle_nothing ()
  *----------------------------------------------------------------------------------------------------------------------------------------
@@ -1005,10 +1204,13 @@ handle_nothing (void)
     String    url     = request_file;
 
     HTTP_Common::html_header (title, title, url, true);
-    HTTP::response += (String) "<P>\r\n";
-    HTTP::response += (String) "<div style='margin-top:10px;margin-bottom:10px;margin-left:20px;padding:10px;border:1px lightgray solid;display:inline-block;'>\r\n";
-    HTTP::response += (String) "Invalid page: " + request_file;
-    HTTP::response += (String) "</div>\r\n";
+
+    HTTP::response += (String)
+        "<P>\r\n"
+        "<div style='margin-top:10px;margin-bottom:10px;margin-left:20px;padding:10px;border:1px lightgray solid;display:inline-block;'>\r\n"
+        "Invalid page: " + request_file +
+        "</div>\r\n";
+
     HTTP_Common::html_trailer ();
 }
 
@@ -1023,10 +1225,13 @@ static PAGEENTRY    pageentry[] =
     { "/",          HTTP_Loco::handle_loco              },
     { "/loco",      HTTP_Loco::handle_loco              },
     { "/addon",     HTTP_AddOn::handle_addon            },
+    { "/led",       HTTP_Led::handle_led                },
     { "/switch",    HTTP_Switch::handle_switch          },
     { "/rr",        HTTP_Railroad::handle_rr            },
     { "/rredit",    HTTP_Railroad::handle_rr_edit       },
     { "/swtest",    HTTP_Switch::handle_switch_test     },
+    { "/sig",       HTTP_Signal::handle_sig             },
+    { "/sigtest",   HTTP_Signal::handle_sig_test        },
     { "/s88",       HTTP_S88::handle_s88,               },
     { "/s88edit",   HTTP_S88::handle_s88_edit           },
     { "/lmedit",    HTTP_Loco::handle_loco_macro_edit   },
@@ -1038,6 +1243,7 @@ static PAGEENTRY    pageentry[] =
     { "/pominfo",   HTTP_POM::handle_pominfo            },
     { "/pomaddr",   HTTP_POM::handle_pomaddr            },
     { "/pomcv",     HTTP_POM::handle_pomcv              },
+    { "/pommot",    HTTP_POMMOT::handle_pommot          },
     { "/pommap",    HTTP_POMMAP::handle_pommap          },
     { "/pomout",    HTTP_POMOUT::handle_pomout          },
     { "/info",      HTTP_Common::handle_info            },
@@ -1046,7 +1252,11 @@ static PAGEENTRY    pageentry[] =
     { "/upl",       handle_upl                          },
     { "/flash",     handle_flash                        },
     { "/doupload",  handle_doupload                     },
-    { "/action",    handle_action                       }
+    { "/action",    handle_action                       },
+    { "/2",         handle_iframe2                      },
+    { "/3",         handle_iframe3                      },
+    { "/4",         handle_iframe4                      },
+    { "/6",         handle_iframe6                      }
 };
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
@@ -1084,7 +1294,7 @@ http_exec (void)
     int     in_par_name     = 0;
     int     in_par_value    = 0;
     int     par_idx         = -1;
-    int     offset;
+    int     offset          = 0;
     int     method;
     int     rtc;
 
@@ -1347,10 +1557,6 @@ HTTP::server (bool edit)
         http_exec ();
         (void) close (http_fd);
         http_fd = 0;
-    }
-    else
-    {
-        Debug::printf (DEBUG_LEVEL_VERBOSE, "HTTP:server: timeout\n");
     }
 
     return HTTP_Common::edit_mode;

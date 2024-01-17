@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * msg.h - message functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ class MSG
         static void         flush_msg (void);
         static void         read_msg (void);
     private:
+        static void         alert (uint8_t * bufp, uint_fast8_t len);
         static void         adc (uint8_t * bufp, uint_fast8_t len);
         static void         rc1 (uint8_t * bufp, uint_fast8_t len);
         static void         rc2 (uint8_t * bufp, uint_fast8_t len);

@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * base.h - base functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,8 @@
 #ifndef BASE_H
 #define BASE_H
 
+extern int              asciitolower (int ch);
 extern void             trim (char * bufp);
 extern uint16_t         htoi (char * buf, uint8_t max_digits);
-extern uint16_t         btoi (char * buf);
 
 #endif

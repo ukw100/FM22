@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * http-addon.cc - HTTP addon routines
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *------------------------------------------------------------------------------------------------------------------------
  */
+#include <algorithm>
+#include <cctype>
 #include <string>
 #include <stdio.h>
 #include <string.h>
@@ -36,6 +38,33 @@
 #include "http-common.h"
 #include "http-addon.h"
 
+#define ADDON_SORT_IDX      0
+#define ADDON_SORT_ADDR     1
+#define ADDON_SORT_NAME     2
+
+static int
+addon_sort_name (const void * p1, const void * p2)
+{
+    const uint16_t *    idx1    = (uint16_t *) p1;
+    const uint16_t *    idx2    = (uint16_t *) p2;
+    String              s1      = AddOns::addons[*idx1].get_name();
+    String              s2      = AddOns::addons[*idx2].get_name();
+
+    std::transform(s1.begin(), s1.end(), s1.begin(), asciitolower);
+    std::transform(s2.begin(), s2.end(), s2.begin(), asciitolower);
+
+    return s1.compare(s2);
+}
+
+static int
+addon_sort_addr (const void * p1, const void * p2)
+{
+    const uint16_t * idx1 = (uint16_t *) p1;
+    const uint16_t * idx2 = (uint16_t *) p2;
+
+    return (int) AddOns::addons[*idx1].get_addr() - (int) AddOns::addons[*idx2].get_addr();
+}
+
 /*----------------------------------------------------------------------------------------------------------------------------------------
  * handle_addon ()
  *----------------------------------------------------------------------------------------------------------------------------------------
@@ -47,6 +76,7 @@ HTTP_AddOn::handle_addon (void)
     String          title           = "Zusatzdecoder";
     String          url             = "/addon";
     const char *    action          = HTTP::parameter ("action");
+    const int       nsort           = HTTP::parameter_number ("sort");
     uint_fast16_t   addon_idx       = 0;
 
     HTTP_Common::html_header (browsertitle, title, url, true);
@@ -79,22 +109,22 @@ HTTP_AddOn::handle_addon (void)
         strncpy (name, sname, 127);
         name[127] = 0;
 
-        aidx = AddOn::add ();
+        aidx = AddOns::add ({});
 
         if (aidx != 0xFFFF)
         {
-            AddOn::set_name (aidx, name);
-            AddOn::set_addr (aidx, addr);
+            AddOns::addons[aidx].set_name (name);
+            AddOns::addons[aidx].set_addr (addr);
 
             if (lidx == 0xFFFF)
             {
-                Loco::reset_addon (lidx);
-                AddOn::reset_loco (aidx);
+                Locos::locos[lidx].reset_addon ();
+                AddOns::addons[aidx].reset_loco ();
             }
             else
             {
-                Loco::set_addon (lidx, aidx);
-                AddOn::set_loco (aidx, lidx);
+                Locos::locos[lidx].set_addon (aidx);
+                AddOns::addons[aidx].set_loco (lidx);
             }
         }
         else
@@ -112,25 +142,52 @@ HTTP_AddOn::handle_addon (void)
 
         if (aidx != naidx)
         {
-            naidx = AddOn::setid (aidx, naidx);
+            naidx = AddOns::set_new_id (aidx, naidx);
         }
 
         if (naidx != 0xFFFF)
         {
-            AddOn::set_name (naidx, sname);
-            AddOn::set_addr (naidx, addr);
+            AddOns::addons[naidx].set_name (sname);
+            AddOns::addons[naidx].set_addr (addr);
 
             if (lidx == 0xFFFF)
             {
-                Loco::reset_addon (lidx);
-                AddOn::reset_loco (naidx);
+                Locos::locos[lidx].reset_addon ();
+                AddOns::addons[naidx].reset_loco ();
             }
             else
             {
-                Loco::set_addon (lidx, naidx);
-                AddOn::set_loco (naidx, lidx);
+                Locos::locos[lidx].set_addon (naidx);
+                AddOns::addons[naidx].set_loco (lidx);
             }
         }
+    }
+
+    uint_fast16_t   n_addons = AddOns::get_n_addons ();
+    uint_fast16_t   map_idx;
+    uint16_t        addon_map[n_addons];
+    String          scolor_id;
+    String          scolor_name;
+    String          scolor_addr;
+
+    for (addon_idx = 0; addon_idx < n_addons; addon_idx++)
+    {
+        addon_map[addon_idx] = addon_idx;
+    }
+
+    if (nsort == ADDON_SORT_NAME)
+    {
+        qsort (addon_map, n_addons, sizeof (uint16_t), addon_sort_name);
+        scolor_name = "style='color:green;'";
+    }
+    else if (nsort == ADDON_SORT_ADDR)
+    {
+        qsort (addon_map, n_addons, sizeof (uint16_t), addon_sort_addr);
+        scolor_addr = "style='color:green;'";
+    }
+    else
+    {
+        scolor_id = "style='color:green;'";
     }
 
     const char * bg = "bgcolor='#e0e0e0'";
@@ -139,9 +196,11 @@ HTTP_AddOn::handle_addon (void)
 
     HTTP::flush ();
 
-    HTTP::response += (String) "<table style='border:1px lightgray solid;'>\r\n";
-    HTTP::response += (String) "<tr " + bg + "><th align='right'>ID</th><th>Bezeichnung</th>";
-    HTTP::response += (String) "<th class='hide600' style='width:50px;'>Adresse</th>";
+    HTTP::response += (String)
+        "<table style='border:1px lightgray solid;'>\r\n"
+        "<tr " + bg + "><th align='right'><a href='?sort=0' " + scolor_id + ">ID</a></th>"
+        "<th><a href='?sort=2' " + scolor_name + ">Bezeichnung</a></th>"
+        "<th class='hide600' style='width:50px;'><a href='?sort=1' " + scolor_addr + ">Adresse</a></th>";
 
     if (HTTP_Common::edit_mode)
     {
@@ -152,9 +211,8 @@ HTTP_AddOn::handle_addon (void)
 
     String          status;
     String          online;
-    uint_fast16_t   n_addons = AddOn::get_n_addons ();
 
-    for (addon_idx = 0; addon_idx < n_addons; addon_idx++)
+    for (map_idx = 0; map_idx < n_addons; map_idx++)
     {
         if (*bg)
         {
@@ -165,19 +223,20 @@ HTTP_AddOn::handle_addon (void)
             bg = "bgcolor='#e0e0e0'";
         }
 
-        uint_fast16_t loco_idx = AddOn::get_loco (addon_idx);
+        addon_idx = addon_map[map_idx];
+        uint_fast16_t loco_idx = AddOns::addons[addon_idx].get_loco ();
 
         HTTP::response += (String) "<tr " + bg + ">"
                   + "<td id='o" + std::to_string(addon_idx) + "' style='text-align:right'>" + std::to_string(addon_idx) + "&nbsp;</td>"
-                  + "<td style='width:200px;overflow:hidden' nowrap><a href='/loco?action=loco&lidx=" + std::to_string(loco_idx) + "'>" + AddOn::get_name(addon_idx) + "</a></td>"
-                  + "<td class='hide600' align='right'>" + std::to_string(AddOn::get_addr(addon_idx)) + "</td>";
+                  + "<td style='width:200px;overflow:hidden' nowrap><a href='/loco?action=loco&lidx=" + std::to_string(loco_idx) + "'>" + AddOns::addons[addon_idx].get_name() + "</a></td>"
+                  + "<td class='hide600' align='right'>" + std::to_string(AddOns::addons[addon_idx].get_addr()) + "</td>";
 
         if (HTTP_Common::edit_mode)
         {
             HTTP::response += (String) "<td><button onclick=\""
                   + "changeaddon(" + std::to_string(addon_idx) + ",'"
-                  + AddOn::get_name(addon_idx) + "',"
-                  + std::to_string(AddOn::get_addr(addon_idx)) + ","
+                  + AddOns::addons[addon_idx].get_name() + "',"
+                  + std::to_string(AddOns::addons[addon_idx].get_addr()) + ","
                   + std::to_string(loco_idx) + ")\""
                   + ">Bearbeiten</button></td>";
         }
@@ -186,59 +245,69 @@ HTTP_AddOn::handle_addon (void)
         HTTP::flush ();
     }
 
-    HTTP::response += (String) "</table>\r\n";
-
-    HTTP::response += (String) "<script>\r\n";
-    HTTP::response += (String) "function changeaddon(aidx, name, addr, lidx)\r\n";
-    HTTP::response += (String) "{\r\n";
-    HTTP::response += (String) "  document.getElementById('action').value = 'changeaddon';\r\n";
-    HTTP::response += (String) "  document.getElementById('aidx').value = aidx;\r\n";
-    HTTP::response += (String) "  document.getElementById('naidx').value = aidx;\r\n";
-    HTTP::response += (String) "  document.getElementById('name').value = name;\r\n";
-    HTTP::response += (String) "  document.getElementById('addr').value = addr;\r\n";
-    HTTP::response += (String) "  document.getElementById('lidx').value = lidx;\r\n";
-    HTTP::response += (String) "  document.getElementById('newid').style.display='';\r\n";
-    HTTP::response += (String) "  document.getElementById('formaddon').style.display='';\r\n";
-    HTTP::response += (String) "}\r\n";
-    HTTP::response += (String) "function newaddon()\r\n";
-    HTTP::response += (String) "{\r\n";
-    HTTP::response += (String) "  document.getElementById('action').value = 'newaddon';\r\n";
-    HTTP::response += (String) "  document.getElementById('name').value = '';\r\n";
-    HTTP::response += (String) "  document.getElementById('addr').value = '';\r\n";
-    HTTP::response += (String) "  document.getElementById('lidx').value = 65535;\r\n";
-    HTTP::response += (String) "  document.getElementById('newid').style.display='none';\r\n";
-    HTTP::response += (String) "  document.getElementById('formaddon').style.display='';\r\n";
-    HTTP::response += (String) "}\r\n";
-    HTTP::response += (String) "</script>\r\n";
+    HTTP::response += (String)
+        "</table>\r\n"
+        "<script>\r\n"
+        "function changeaddon(aidx, name, addr, lidx)\r\n"
+        "{\r\n"
+        "  document.getElementById('action').value = 'changeaddon';\r\n"
+        "  document.getElementById('aidx').value = aidx;\r\n"
+        "  document.getElementById('naidx').value = aidx;\r\n"
+        "  document.getElementById('name').value = name;\r\n"
+        "  document.getElementById('addr').value = addr;\r\n"
+        "  document.getElementById('lidx').value = lidx;\r\n"
+        "  document.getElementById('newid').style.display='';\r\n"
+        "  document.getElementById('formaddon').style.display='';\r\n"
+        "}\r\n"
+        "function newaddon()\r\n"
+        "{\r\n"
+        "  document.getElementById('action').value = 'newaddon';\r\n"
+        "  document.getElementById('name').value = '';\r\n"
+        "  document.getElementById('addr').value = '';\r\n"
+        "  document.getElementById('lidx').value = 65535;\r\n"
+        "  document.getElementById('newid').style.display='none';\r\n"
+        "  document.getElementById('formaddon').style.display='';\r\n"
+        "}\r\n"
+        "</script>\r\n";
 
     HTTP::flush ();
 
-    if (AddOn::data_changed)
+    if (AddOns::data_changed)
     {
-        HTTP::response += (String) "<BR><form method='get' action='" + url + "'>\r\n";
-        HTTP::response += (String) "<input type='hidden' name='action' value='saveaddon'>\r\n";
-        HTTP::response += (String) "<input type='submit' value='Ge&auml;nderte Konfiguration auf Datentr&auml;ger speichern'>";
-        HTTP::response += (String) "</form>\r\n";
+        HTTP::response += (String)
+            "<BR><form method='get' action='" + url + "'>\r\n"
+            "<input type='hidden' name='action' value='saveaddon'>\r\n"
+            "<input type='submit' value='Ge&auml;nderte Konfiguration auf Datentr&auml;ger speichern'>"
+            "</form>\r\n";
     }
 
     if (HTTP_Common::edit_mode)
     {
-        HTTP::response += (String) "<BR><button onclick='newaddon()'>Neuer Zusatzdecoder</button>\r\n";
+        HTTP::response += (String)
+            "<BR><button onclick='newaddon()'>Neuer Zusatzdecoder</button>\r\n"
+            "<form id='formaddon' style='display:none'>\r\n"
+            "<table>\r\n"
+            "<tr id='newid'>\r\n";
 
-        HTTP::response += (String) "<form id='formaddon' style='display:none'>\r\n";
-        HTTP::response += (String) "<table>\r\n";
-        HTTP::response += (String) "<tr id='newid'>\r\n";
         HTTP_Common::print_id_select_list ("naidx", n_addons);
-        HTTP::response += (String) "</tr>\r\n";
-        HTTP::response += (String) "<tr><td>Name:</td><td><input type='text' id='name' name='name'></td></tr>\r\n";
-        HTTP::response += (String) "<tr><td>Adresse:</td><td><input type='text' id='addr' name='addr'></td></tr>\r\n";
-        HTTP::response += (String) "<tr><td>Ist Zusatzdecoder von Lok:</td><td>";
+
+        HTTP::response += (String)
+            "</tr>\r\n"
+            "<tr><td>Name:</td><td><input type='text' id='name' name='name'></td></tr>\r\n"
+            "<tr><td>Adresse:</td><td><input type='text' id='addr' name='addr'></td></tr>\r\n"
+            "<tr><td>Ist Zusatzdecoder von Lok:</td><td>";
+
         HTTP_Common::print_loco_select_list ("lidx", 0, LOCO_LIST_DO_DISPLAY);
-        HTTP::response += (String) "</td></tr>\r\n";
-        HTTP::response += (String) "<tr><td></td><td align='right'>";
-        HTTP::response += (String) "<input type='hidden' name='action' id='action' value='newaddon'><input type='hidden' name='aidx' id='aidx'><input type='submit' value='Speichern'></td></tr>\r\n";
-        HTTP::response += (String) "</table>\r\n";
-        HTTP::response += (String) "</form>\r\n";
+
+        HTTP::response += (String)
+            "</td></tr>\r\n"
+            "<tr><td></td><td align='right'>"
+            "<input type='hidden' name='action' id='action' value='newaddon'>"
+            "<input type='hidden' name='aidx' id='aidx'>"
+            "<input type='hidden' name='sort' value='" + std::to_string(nsort) + "'>"
+            "<input type='submit' value='Speichern'></td></tr>\r\n"
+            "</table>\r\n"
+            "</form>\r\n";
     }
 
     HTTP::response += (String) "</div>\r\n";
@@ -252,7 +321,7 @@ HTTP_AddOn::action_togglefunctionaddon (void)
     uint_fast8_t    fidx          = HTTP::parameter_number ("f");
     uint_fast8_t    value;
 
-    if (AddOn::get_function (addon_idx, fidx))
+    if (AddOns::addons[addon_idx].get_function (fidx))
     {
         value = 0;
     }
@@ -261,7 +330,7 @@ HTTP_AddOn::action_togglefunctionaddon (void)
         value = 1;
     }
 
-    AddOn::set_function (addon_idx, fidx, value);
+    AddOns::addons[addon_idx].set_function (fidx, value);
     HTTP::response = (String) "" + std::to_string(value);
 }
 
@@ -270,9 +339,9 @@ HTTP_AddOn::action_getfa (void)
 {
     uint_fast16_t   aidx        = HTTP::parameter_number ("aidx");
     uint_fast8_t    f           = HTTP::parameter_number ("f");
-    uint_fast16_t   fn          = AddOn::get_function_name_idx (aidx, f);
-    bool            pulse       = AddOn::get_function_pulse (aidx, f);
-    bool            sound       = AddOn::get_function_sound (aidx, f);
+    uint_fast16_t   fn          = AddOns::addons[aidx].get_function_name_idx (f);
+    bool            pulse       = AddOns::addons[aidx].get_function_pulse (f);
+    bool            sound       = AddOns::addons[aidx].get_function_sound (f);
 
     HTTP::response = std::to_string(fn) + "\t" + std::to_string(pulse) + "\t" + std::to_string(sound);
 }

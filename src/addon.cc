@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * addon.cc - addon management functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,25 +35,22 @@
 
 #define MAX_PACKET_SEQUENCES    10
 
-bool                    AddOn::data_changed = false;
-ADDON                   AddOn::addons[MAX_ADDONS];                                  // addon
-uint_fast16_t           AddOn::n_addons = 0;                                          // number of addons
+std::vector<AddOn>      AddOns::addons;                                         // addons
+bool                    AddOns::data_changed = false;                           // flag
+uint_fast16_t           AddOns::n_addons = 0;                                   // number of addons
 
 /*------------------------------------------------------------------------------------------------------------------------
  * sendfunction() - send function
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::sendfunction (uint_fast16_t addon_idx, uint_fast8_t range)
+AddOn::sendfunction (uint_fast8_t range)
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        uint16_t    addr            = AddOn::addons[addon_idx].addr;
-        uint32_t    functions       = AddOn::addons[addon_idx].functions;
+    uint16_t    addr            = this->addr;
+    uint32_t    functions       = this->functions;
 
-        DCC::loco_function (0xFFFF, addr, functions, range);
-        Debug::printf (DEBUG_LEVEL_VERBOSE, "AddOn::sendfunction: addon_idx=%d range %d\n", addon_idx, range);
-    }
+    DCC::loco_function (0xFFFF, addr, functions, range);
+    Debug::printf (DEBUG_LEVEL_VERBOSE, "AddOn::sendfunction: addon_idx=%d range %d\n", this->id, range);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -73,203 +70,103 @@ AddOn::sendfunction (uint_fast16_t addon_idx, uint_fast8_t range)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::sendcmd (uint_fast16_t addon_idx, uint_fast8_t packet_no)
+AddOn::sendcmd (uint_fast8_t packet_no)
 {
-    if (addon_idx < AddOn::n_addons)
+    if (packet_no & 0x01)           // odd packet number: send functions
     {
-        if (packet_no & 0x01)           // odd packet number: send functions
+        switch (packet_no)
         {
-            switch (packet_no)
+            case 1:
             {
-                case 1:
+                AddOn::sendfunction (DCC_F00_F04_RANGE);
+                Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F00_F04_RANGE)\n", this->id);
+                break;
+            }
+            case 3:
+            {
+                if (this->addonfunction.max >= 5)
                 {
-                    AddOn::sendfunction (addon_idx, DCC_F00_F04_RANGE);
-                    Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F00_F04_RANGE)\n", addon_idx);
-                    break;
+                    AddOn::sendfunction (DCC_F05_F08_RANGE);
+                    Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F05_F08_RANGE)\n", this->id);
                 }
-                case 3:
+                break;
+            }
+            case 5:
+            {
+                if (this->addonfunction.max >= 9)
                 {
-                    if (AddOn::addons[addon_idx].addonfunction.max >= 5)
-                    {
-                        AddOn::sendfunction (addon_idx, DCC_F05_F08_RANGE);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F05_F08_RANGE)\n", addon_idx);
-                    }
-                    break;
+                    AddOn::sendfunction (DCC_F09_F12_RANGE);
+                    Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F09_F12_RANGE)\n", this->id);
                 }
-                case 5:
+                break;
+            }
+            case 7:
+            {
+                if (this->addonfunction.max >= 13)
                 {
-                    if (AddOn::addons[addon_idx].addonfunction.max >= 9)
-                    {
-                        AddOn::sendfunction (addon_idx, DCC_F09_F12_RANGE);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F09_F12_RANGE)\n", addon_idx);
-                    }
-                    break;
+                    AddOn::sendfunction (DCC_F13_F20_RANGE);
+                    Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F13_F20_RANGE)\n", this->id);
                 }
-                case 7:
+                break;
+            }
+            case 9:
+            {
+                if (this->addonfunction.max >= 21)
                 {
-                    if (AddOn::addons[addon_idx].addonfunction.max >= 13)
-                    {
-                        AddOn::sendfunction (addon_idx, DCC_F13_F20_RANGE);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F13_F20_RANGE)\n", addon_idx);
-                    }
-                    break;
+                    AddOn::sendfunction (DCC_F21_F28_RANGE);
+                    Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F21_F28_RANGE)\n", this->id);
                 }
-                case 9:
-                {
-                    if (AddOn::addons[addon_idx].addonfunction.max >= 21)
-                    {
-                        AddOn::sendfunction (addon_idx, DCC_F21_F28_RANGE);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F21_F28_RANGE)\n", addon_idx);
-                    }
-                    break;
-                }
+                break;
             }
         }
-        else // even packet number: send speed/direction
+    }
+    else // even packet number: send speed/direction
+    {
+        uint_fast16_t   loco_idx = this->loco_idx;
+
+        if (loco_idx != 0xFFFF)
         {
-            uint_fast16_t   loco_idx = AddOn::addons[addon_idx].loco_idx;
+            uint_fast16_t   addr    = this->addr;            // use addr of addon
+            uint_fast8_t    fwd     = Locos::locos[loco_idx].get_fwd ();        // use speed and dir of loco!
+            uint_fast8_t    speed   = Locos::locos[loco_idx].get_speed ();      // use speed and dir of loco!
 
-            if (loco_idx != 0xFFFF)
-            {
-                uint_fast16_t   addr    = AddOn::addons[addon_idx].addr;            // use addr of addon
-                uint_fast8_t    fwd     = Loco::get_fwd (loco_idx);                 // use speed and dir of loco!
-                uint_fast8_t    speed   = Loco::get_speed (loco_idx);               // use speed and dir of loco!
-
-                DCC::loco (0xFFFF, addr, fwd, speed, 0, 0);
-                Debug::printf (DEBUG_LEVEL_VERBOSE, "AddOn::schedule: addon_idx=%d loco_idx=%d addr=%d, fwd=%d, speed=%d\n", addon_idx, loco_idx, addr, fwd, speed);
-            }
+            DCC::loco (0xFFFF, addr, fwd, speed, 0, 0);
+            Debug::printf (DEBUG_LEVEL_VERBOSE, "AddOn::sendcmd: addon_idx=%d loco_idx=%d addr=%d, fwd=%d, speed=%d\n", this->id, loco_idx, addr, fwd, speed);
         }
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  add () - add a addon
+ *  AddOn () - constructor
  *------------------------------------------------------------------------------------------------------------------------
  */
-uint_fast16_t
-AddOn::add (void)
+AddOn::AddOn ()
 {
-    uint_fast16_t addon_idx = AddOn::n_addons;
+    uint_fast8_t    fidx;
 
-    if (addon_idx < MAX_ADDONS)
+    this->name                  = "";
+    this->addr                  = 0;
+    this->loco_idx              = 0xFFFF;
+    this->functions             = 0;
+    this->packet_sequence_idx   = 0;
+    this->active                = 0;
+
+    for (fidx = 0; fidx < MAX_LOCO_FUNCTIONS; fidx++)
     {
-        uint_fast8_t    fidx;
-        AddOn::addons[addon_idx].functions  = 0;
-        AddOn::addons[addon_idx].loco_idx   = 0xFFFF;
-
-        for (fidx = 0; fidx < MAX_LOCO_FUNCTIONS; fidx++)
-        {
-            AddOn::addons[addon_idx].addonfunction.name_idx[fidx] = 0xFFFF;
-        }
-
-        AddOn::n_addons++;
-        AddOn::data_changed = true;
-    }
-    else
-    {
-        addon_idx = 0xFFFF;
+        this->addonfunction.name_idx[fidx] = 0xFFFF;
     }
 
-    return addon_idx;
+    AddOns::data_changed = true;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  setid () - set new id
- *------------------------------------------------------------------------------------------------------------------------
- */
-uint_fast16_t
-AddOn::setid (uint_fast16_t addon_idx, uint_fast16_t new_addon_idx)
-{
-    uint_fast16_t   rtc = 0xFFFF;
-
-    if (addon_idx < AddOn::n_addons && new_addon_idx < AddOn::n_addons)
-    {
-        if (addon_idx != new_addon_idx)
-        {
-            ADDON            tmpaddon;
-            uint_fast16_t   lidx;
-
-            uint16_t *      map_new_addon_idx = (uint16_t *) calloc (AddOn::n_addons, sizeof (uint16_t));
-
-            for (lidx = 0; lidx < AddOn::n_addons; lidx++)
-            {
-                map_new_addon_idx[lidx] = lidx;
-            }
-
-            memcpy (&tmpaddon, AddOn::addons + addon_idx, sizeof (ADDON));
-
-            if (new_addon_idx < addon_idx)
-            {
-                // step 1: shift addon
-                for (lidx = addon_idx; lidx > new_addon_idx; lidx--)
-                {
-                    memcpy (AddOn::addons + lidx, AddOn::addons + lidx - 1, sizeof (ADDON));
-                    map_new_addon_idx[lidx - 1] = lidx;
-                }
-            }
-            else // if (new_addon_idx > addon_idx)
-            {
-                // step 1: shift addon
-                for (lidx = addon_idx; lidx < new_addon_idx; lidx++)
-                {
-                    memcpy (AddOn::addons + lidx, AddOn::addons + lidx + 1, sizeof (ADDON));
-                    map_new_addon_idx[lidx + 1] = lidx;
-                }
-            }
-
-            memcpy (AddOn::addons + lidx, &tmpaddon, sizeof (ADDON));
-            map_new_addon_idx[addon_idx] = lidx;
-
-            for (lidx = 0; lidx < AddOn::n_addons; lidx++)
-            {
-                Debug::printf (DEBUG_LEVEL_NORMAL, "%2d -> %2d\n", lidx, map_new_addon_idx[lidx]);
-            }
-
-            // step 2: correct loco_idx in LOCO, RAILROAD, RCL, S88
-            Loco::set_new_addon_ids (map_new_addon_idx, AddOn::n_addons);
-            // Railroad::set_new_addon_ids (map_new_addon_idx, AddOn::n_addons);    // not necessary
-            RCL::set_new_addon_ids (map_new_addon_idx, AddOn::n_addons);
-            S88::set_new_addon_ids (map_new_addon_idx, AddOn::n_addons);
-
-            free (map_new_addon_idx);
-            AddOn::data_changed = true;
-            rtc = new_addon_idx;
-        }
-        else
-        {
-            rtc = addon_idx;
-        }
-    }
-
-    return rtc;
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  AddOn::set_new_loco_ids ()
+ *  set_id () - set id
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::set_new_loco_ids (uint16_t * map_new_loco_idx, uint16_t n_locos)
+AddOn::set_id (uint_fast16_t id)
 {
-    uint_fast8_t     addon_idx;
-
-    for (addon_idx = 0; addon_idx < AddOn::n_addons; addon_idx++)
-    {
-        if (AddOn::addons[addon_idx].loco_idx < n_locos)
-        {
-            AddOn::addons[addon_idx].loco_idx = map_new_loco_idx[AddOn::addons[addon_idx].loco_idx];
-        }
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  get_n_addons () - get number of addons
- *------------------------------------------------------------------------------------------------------------------------
- */
-uint_fast16_t
-AddOn::get_n_addons (void)
-{
-    return AddOn::n_addons;
+    this->id = id;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -277,30 +174,30 @@ AddOn::get_n_addons (void)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::set_loco (uint_fast16_t addon_idx, uint_fast16_t loco_idx)
+AddOn::set_loco (uint_fast16_t loco_idx)
 {
-    uint_fast16_t n_locos = Loco::get_n_locos ();
+    uint_fast16_t n_locos = Locos::get_n_locos ();
 
-    if (addon_idx < AddOn::n_addons && loco_idx < n_locos)
+    if (loco_idx < n_locos)
     {
         uint_fast16_t   aidx;
 
-        for (aidx = 0; aidx < AddOn::n_addons; aidx++)                              // first remove loco from other addons
+        for (aidx = 0; aidx < AddOns::get_n_addons(); aidx++)                              // first remove loco from other addons
         {
-            if (AddOn::addons[aidx].loco_idx == loco_idx)
+            if (AddOns::addons[aidx].loco_idx == loco_idx)
             {
-                if (aidx != addon_idx)
+                if (aidx != this->id)
                 {
-                    AddOn::addons[aidx].loco_idx = 0xFFFF;
-                    AddOn::data_changed = true;
+                    AddOns::addons[aidx].loco_idx = 0xFFFF;
+                    AddOns::data_changed = true;
                 }
             }
         }
 
-        if (AddOn::addons[addon_idx].loco_idx != loco_idx)
+        if (this->loco_idx != loco_idx)
         {
-            AddOn::addons[addon_idx].loco_idx = loco_idx;
-            AddOn::data_changed = true;
+            this->loco_idx = loco_idx;
+            AddOns::data_changed = true;
         }
     }
 }
@@ -310,15 +207,12 @@ AddOn::set_loco (uint_fast16_t addon_idx, uint_fast16_t loco_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::reset_loco (uint_fast16_t addon_idx)
+AddOn::reset_loco ()
 {
-    if (addon_idx < AddOn::n_addons)
+    if (this->loco_idx != 0xFFFF)
     {
-        if (AddOn::addons[addon_idx].loco_idx != 0xFFFF)
-        {
-            AddOn::addons[addon_idx].loco_idx = 0xFFFF;
-            AddOn::data_changed = true;
-        }
+        this->loco_idx = 0xFFFF;
+        AddOns::data_changed = true;
     }
 }
 
@@ -327,19 +221,10 @@ AddOn::reset_loco (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast16_t
-AddOn::get_loco (uint_fast16_t addon_idx)
+AddOn::get_loco ()
 {
     uint_fast16_t   rtc;
-
-    if (addon_idx < AddOn::n_addons)
-    {
-        rtc = AddOn::addons[addon_idx].loco_idx;
-    }
-    else
-    {
-        rtc = 0xFFFF;
-    }
-
+    rtc = this->loco_idx;
     return rtc;
 }
 
@@ -348,46 +233,20 @@ AddOn::get_loco (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::set_name (uint_fast16_t addon_idx, const char * name)
+AddOn::set_name (std::string name)
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        int l = strlen (name);
-
-        if (! AddOn::addons[addon_idx].name || strcmp (AddOn::addons[addon_idx].name, name) != 0)
-        {
-            if (AddOn::addons[addon_idx].name)
-            {
-                if ((int) strlen (AddOn::addons[addon_idx].name) < l)
-                {
-                    free (AddOn::addons[addon_idx].name);
-                    AddOn::addons[addon_idx].name = (char *) NULL;
-                }
-            }
-
-            if (! AddOn::addons[addon_idx].name)
-            {
-                AddOn::addons[addon_idx].name = (char *) malloc (l + 1);
-            }
-
-            strcpy (AddOn::addons[addon_idx].name, name);
-            AddOn::data_changed = true;
-        }
-    }
+    this->name = name;
+    AddOns::data_changed = true;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
  *  get_name (idx) - get name
  *------------------------------------------------------------------------------------------------------------------------
  */
-char *
-AddOn::get_name (uint_fast16_t addon_idx)
+std::string
+AddOn::get_name ()
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        return AddOn::addons[addon_idx].name;
-    }
-    return (char *) NULL;
+    return this->name;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -395,15 +254,12 @@ AddOn::get_name (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::set_addr (uint_fast16_t addon_idx, uint_fast16_t addr)
+AddOn::set_addr (uint_fast16_t addr)
 {
-    if (addon_idx < AddOn::n_addons)
+    if (this->addr != addr)
     {
-        if (AddOn::addons[addon_idx].addr != addr)
-        {
-            AddOn::addons[addon_idx].addr = addr;
-            AddOn::data_changed = true;
-        }
+        this->addr = addr;
+        AddOns::data_changed = true;
     }
 }
 
@@ -412,14 +268,9 @@ AddOn::set_addr (uint_fast16_t addon_idx, uint_fast16_t addr)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast16_t
-AddOn::get_addr (uint_fast16_t addon_idx)
+AddOn::get_addr ()
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        return (AddOn::addons[addon_idx].addr);
-    }
-
-    return 0;
+    return (this->addr);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -427,23 +278,20 @@ AddOn::get_addr (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::set_function_type_pulse (uint_fast16_t addon_idx, uint_fast8_t f, bool b)
+AddOn::set_function_type_pulse (uint_fast8_t f, bool b)
 {
-    if (addon_idx < AddOn::n_addons)
+    uint32_t    f_mask = 1 << f;
+
+    if (b)
     {
-        uint32_t    f_mask = 1 << f;
-
-        if (b)
-        {
-            AddOn::addons[addon_idx].addonfunction.pulse_mask |= f_mask;
-        }
-        else
-        {
-            AddOn::addons[addon_idx].addonfunction.pulse_mask &= ~f_mask;
-        }
-
-        AddOn::data_changed = true;
+        this->addonfunction.pulse_mask |= f_mask;
     }
+    else
+    {
+        this->addonfunction.pulse_mask &= ~f_mask;
+    }
+
+    AddOns::data_changed = true;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -451,23 +299,20 @@ AddOn::set_function_type_pulse (uint_fast16_t addon_idx, uint_fast8_t f, bool b)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::set_function_type_sound (uint_fast16_t addon_idx, uint_fast8_t f, bool b)
+AddOn::set_function_type_sound (uint_fast8_t f, bool b)
 {
-    if (addon_idx < AddOn::n_addons)
+    uint32_t    f_mask = 1 << f;
+
+    if (b)
     {
-        uint32_t    f_mask = 1 << f;
-
-        if (b)
-        {
-            AddOn::addons[addon_idx].addonfunction.sound_mask |= f_mask;
-        }
-        else
-        {
-            AddOn::addons[addon_idx].addonfunction.sound_mask &= ~f_mask;
-        }
-
-        AddOn::data_changed = true;
+        this->addonfunction.sound_mask |= f_mask;
     }
+    else
+    {
+        this->addonfunction.sound_mask &= ~f_mask;
+    }
+
+    AddOns::data_changed = true;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -475,21 +320,17 @@ AddOn::set_function_type_sound (uint_fast16_t addon_idx, uint_fast8_t f, bool b)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-AddOn::set_function_type (uint_fast16_t addon_idx, uint_fast8_t fidx, uint_fast16_t function_name_idx, bool pulse, bool sound)
+AddOn::set_function_type (uint_fast8_t fidx, uint_fast16_t function_name_idx, bool pulse, bool sound)
 {
-    if (addon_idx < AddOn::n_addons)
+    if (this->addonfunction.max < fidx)
     {
-        if (AddOn::addons[addon_idx].addonfunction.max < fidx)
-        {
-            AddOn::addons[addon_idx].addonfunction.max = fidx;
-        }
-
-        AddOn::addons[addon_idx].addonfunction.name_idx[fidx] = function_name_idx;
-        AddOn::set_function_type_pulse (addon_idx, fidx, pulse);
-        AddOn::set_function_type_sound (addon_idx, fidx, sound);
-        return 1;
+        this->addonfunction.max = fidx;
     }
-    return 0;
+
+    this->addonfunction.name_idx[fidx] = function_name_idx;
+    AddOn::set_function_type_pulse (fidx, pulse);
+    AddOn::set_function_type_sound (fidx, sound);
+    return 1;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -497,14 +338,10 @@ AddOn::set_function_type (uint_fast16_t addon_idx, uint_fast8_t fidx, uint_fast1
  *------------------------------------------------------------------------------------------------------------------------
  */
 std::string&
-AddOn::get_function_name (uint_fast16_t addon_idx, uint_fast8_t fidx)
+AddOn::get_function_name (uint_fast8_t fidx)
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        uint_fast16_t    function_name_idx = AddOn::addons[addon_idx].addonfunction.name_idx[fidx];
-        return Functions::get (function_name_idx);
-    }
-    return Functions::get (0xFFFF);
+    uint_fast16_t    function_name_idx = this->addonfunction.name_idx[fidx];
+    return Functions::get (function_name_idx);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -512,14 +349,10 @@ AddOn::get_function_name (uint_fast16_t addon_idx, uint_fast8_t fidx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast16_t
-AddOn::get_function_name_idx (uint_fast16_t addon_idx, uint_fast8_t fidx)
+AddOn::get_function_name_idx (uint_fast8_t fidx)
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        uint_fast16_t    function_name_idx = AddOn::addons[addon_idx].addonfunction.name_idx[fidx];
-        return function_name_idx;
-    }
-    return 0;
+    uint_fast16_t    function_name_idx = this->addonfunction.name_idx[fidx];
+    return function_name_idx;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -527,20 +360,16 @@ AddOn::get_function_name_idx (uint_fast16_t addon_idx, uint_fast8_t fidx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-AddOn::get_function_pulse (uint_fast16_t addon_idx, uint_fast8_t fidx)
+AddOn::get_function_pulse (uint_fast8_t fidx)
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        uint32_t        f_mask = 1 << fidx;
-        bool            b = false;
+    uint32_t        f_mask = 1 << fidx;
+    bool            b = false;
 
-        if (AddOn::addons[addon_idx].addonfunction.pulse_mask & f_mask)
-        {
-            b = true;
-        }
-        return b;
+    if (this->addonfunction.pulse_mask & f_mask)
+    {
+        b = true;
     }
-    return false;
+    return b;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -548,13 +377,9 @@ AddOn::get_function_pulse (uint_fast16_t addon_idx, uint_fast8_t fidx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint32_t
-AddOn::get_function_pulse_mask (uint_fast16_t addon_idx)
+AddOn::get_function_pulse_mask ()
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        return AddOn::addons[addon_idx].addonfunction.pulse_mask;
-    }
-    return 0;
+    return this->addonfunction.pulse_mask;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -562,20 +387,16 @@ AddOn::get_function_pulse_mask (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-AddOn::get_function_sound (uint_fast16_t addon_idx, uint_fast8_t fidx)
+AddOn::get_function_sound (uint_fast8_t fidx)
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        uint32_t        f_mask = 1 << fidx;
-        bool            b = false;
+    uint32_t        f_mask = 1 << fidx;
+    bool            b = false;
 
-        if (AddOn::addons[addon_idx].addonfunction.sound_mask & f_mask)
-        {
-            b = true;
-        }
-        return b;
+    if (this->addonfunction.sound_mask & f_mask)
+    {
+        b = true;
     }
-    return false;
+    return b;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -583,13 +404,9 @@ AddOn::get_function_sound (uint_fast16_t addon_idx, uint_fast8_t fidx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint32_t
-AddOn::get_function_sound_mask (uint_fast16_t addon_idx)
+AddOn::get_function_sound_mask ()
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        return AddOn::addons[addon_idx].addonfunction.sound_mask;
-    }
-    return 0;
+    return this->addonfunction.sound_mask;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -597,14 +414,11 @@ AddOn::get_function_sound_mask (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::activate (uint_fast16_t addon_idx)
+AddOn::activate ()
 {
-    if (addon_idx < AddOn::n_addons)
+    if (! this->active)
     {
-        if (! AddOn::addons[addon_idx].active)
-        {
-            AddOn::addons[addon_idx].active = true;
-        }
+        this->active = true;
     }
 }
 
@@ -613,14 +427,11 @@ AddOn::activate (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::deactivate (uint_fast16_t addon_idx)
+AddOn::deactivate ()
 {
-    if (addon_idx < AddOn::n_addons)
+    if (this->active)
     {
-        if (AddOn::addons[addon_idx].active)
-        {
-            AddOn::addons[addon_idx].active = false;
-        }
+        this->active = false;
     }
 }
 
@@ -629,9 +440,9 @@ AddOn::deactivate (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-AddOn::is_active (uint_fast16_t addon_idx)
+AddOn::is_active ()
 {
-    if (addon_idx < AddOn::n_addons && AddOn::addons[addon_idx].active)
+    if (this->active)
     {
         return true;
     }
@@ -643,54 +454,51 @@ AddOn::is_active (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::set_function (uint_fast16_t addon_idx, uint_fast8_t f, bool b)
+AddOn::set_function (uint_fast8_t f, bool b)
 {
-    if (addon_idx < AddOn::n_addons)
+    uint32_t        fmask = 1 << f;
+    uint_fast8_t    range;
+
+    if (b)
     {
-        uint32_t        fmask = 1 << f;
-        uint_fast8_t    range;
+        this->functions |= fmask;
 
-        if (b)
+        if (fmask & this->addonfunction.pulse_mask)      // function is of type pulse
         {
-            AddOn::addons[addon_idx].functions |= fmask;
-
-            if (fmask & AddOn::addons[addon_idx].addonfunction.pulse_mask)      // function is of type pulse
-            {
-                Event::add_event_addon_function (2, addon_idx, f, false);       // reset function in 200 msec
-            }
+            Event::add_event_addon_function (2, this->id, f, false);       // reset function in 200 msec
         }
-        else
-        {
-            AddOn::addons[addon_idx].functions &= ~fmask;
-        }
-
-        if (f <= 4)
-        {
-            range = DCC_F00_F04_RANGE;
-        }
-        else if (f <= 8)
-        {
-            range = DCC_F05_F08_RANGE;
-        }
-        else if (f <= 12)
-        {
-            range = DCC_F09_F12_RANGE;
-        }
-        else if (f <= 20)
-        {
-            range = DCC_F13_F20_RANGE;
-        }
-        else if (f <= 28)
-        {
-            range = DCC_F21_F28_RANGE;
-        }
-        else
-        {
-            range = DCC_F29_F36_RANGE;
-        }
-
-        AddOn::sendfunction (addon_idx, range);
     }
+    else
+    {
+        this->functions &= ~fmask;
+    }
+
+    if (f <= 4)
+    {
+        range = DCC_F00_F04_RANGE;
+    }
+    else if (f <= 8)
+    {
+        range = DCC_F05_F08_RANGE;
+    }
+    else if (f <= 12)
+    {
+        range = DCC_F09_F12_RANGE;
+    }
+    else if (f <= 20)
+    {
+        range = DCC_F13_F20_RANGE;
+    }
+    else if (f <= 28)
+    {
+        range = DCC_F21_F28_RANGE;
+    }
+    else
+    {
+        range = DCC_F29_F36_RANGE;
+    }
+
+    AddOn::sendfunction (range);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -698,14 +506,10 @@ AddOn::set_function (uint_fast16_t addon_idx, uint_fast8_t f, bool b)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-AddOn::get_function (uint_fast16_t addon_idx, uint_fast8_t f)
+AddOn::get_function (uint_fast8_t f)
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        uint32_t mask = 1 << f;
-        return (AddOn::addons[addon_idx].functions & mask) ? true : false;
-    }
-    return false;
+    uint32_t mask = 1 << f;
+    return (this->functions & mask) ? true : false;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -713,12 +517,9 @@ AddOn::get_function (uint_fast16_t addon_idx, uint_fast8_t f)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-AddOn::reset_functions (uint_fast16_t addon_idx)
+AddOn::reset_functions ()
 {
-    if (addon_idx < AddOn::n_addons)
-    {
-        AddOn::addons[addon_idx].functions = 0;       // let scheduler turn off functions
-    }
+    this->functions = 0;       // let scheduler turn off functions
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -726,13 +527,148 @@ AddOn::reset_functions (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint32_t
-AddOn::get_functions (uint_fast16_t addon_idx)
+AddOn::get_functions ()
 {
-    if (addon_idx < AddOn::n_addons)
+    return this->functions;
+}
+
+void
+AddOn::sched ()
+{
+    if (this->active && this->addr != 0)
     {
-        return AddOn::addons[addon_idx].functions;
+        uint_fast8_t packet_sequence_idx = this->packet_sequence_idx;
+
+        this->sendcmd (packet_sequence_idx);
+        packet_sequence_idx++;
+
+        if (packet_sequence_idx >= MAX_PACKET_SEQUENCES)
+        {
+            packet_sequence_idx = 0;
+        }
+
+        this->packet_sequence_idx = packet_sequence_idx;
     }
-    return 0;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  add () - add addon
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+uint_fast16_t
+AddOns::add (const AddOn& addon)
+{
+    if (AddOns::n_addons < MAX_ADDONS)
+    {
+        addons.push_back(addon);
+        AddOns::addons[n_addons].set_id(n_addons);
+        AddOns::n_addons++;
+        return addons.size() - 1;
+    }
+    return 0xFFFF;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  get_n_addons () - get number of addons
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+uint_fast16_t
+AddOns::get_n_addons (void)
+{
+    return AddOns::n_addons;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  set_new_id () - set new id
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+uint_fast16_t
+AddOns::set_new_id (uint_fast16_t addon_idx, uint_fast16_t new_addon_idx)
+{
+    uint_fast16_t   rtc = 0xFFFF;
+
+    if (addon_idx < AddOns::n_addons && new_addon_idx < AddOns::n_addons)
+    {
+        if (addon_idx != new_addon_idx)
+        {
+            AddOn           tmpaddon;
+            uint_fast16_t   lidx;
+
+            uint16_t *      map_new_addon_idx = (uint16_t *) calloc (AddOns::n_addons, sizeof (uint16_t));
+
+            for (lidx = 0; lidx < AddOns::n_addons; lidx++)
+            {
+                map_new_addon_idx[lidx] = lidx;
+            }
+
+            tmpaddon = AddOns::addons[addon_idx];
+
+            if (new_addon_idx < addon_idx)
+            {
+                // step 1: shift addon
+                for (lidx = addon_idx; lidx > new_addon_idx; lidx--)
+                {
+                    AddOns::addons[lidx] = AddOns::addons[lidx - 1];
+                    map_new_addon_idx[lidx - 1] = lidx;
+                }
+            }
+            else // if (new_addon_idx > addon_idx)
+            {
+                // step 1: shift addon
+                for (lidx = addon_idx; lidx < new_addon_idx; lidx++)
+                {
+                    AddOns::addons[lidx] = AddOns::addons[lidx + 1];
+                    map_new_addon_idx[lidx + 1] = lidx;
+                }
+            }
+
+            AddOns::addons[lidx] = tmpaddon;
+            map_new_addon_idx[addon_idx] = lidx;
+
+            for (lidx = 0; lidx < AddOns::n_addons; lidx++)
+            {
+                Debug::printf (DEBUG_LEVEL_VERBOSE, "%2d -> %2d\n", lidx, map_new_addon_idx[lidx]);
+            }
+
+            // step 2: correct loco_idx in LOCO, RAILROAD, RCL, S88
+            Locos::set_new_addon_ids (map_new_addon_idx, AddOns::n_addons);
+            // Railroad::set_new_addon_ids (map_new_addon_idx, AddOns::n_addons);    // not necessary
+            RCL::set_new_addon_ids (map_new_addon_idx, AddOns::n_addons);
+            S88::set_new_addon_ids (map_new_addon_idx, AddOns::n_addons);
+
+            free (map_new_addon_idx);
+            AddOns::data_changed = true;
+            rtc = new_addon_idx;
+
+            AddOns::renumber ();
+        }
+        else
+        {
+            rtc = addon_idx;
+        }
+    }
+
+    return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  AddOns::set_new_loco_ids ()
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+AddOns::set_new_loco_ids (uint16_t * map_new_loco_idx, uint16_t n_locos)
+{
+    uint_fast16_t     addon_idx;
+
+    for (addon_idx = 0; addon_idx < AddOns::n_addons; addon_idx++)
+    {
+        uint_fast16_t   loco_idx = AddOns::addons[addon_idx].get_loco(); 
+
+        if (loco_idx < n_locos)
+        {
+            AddOns::addons[addon_idx].set_loco(map_new_loco_idx[loco_idx]);
+        }
+    }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -742,7 +678,7 @@ AddOn::get_functions (uint_fast16_t addon_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-AddOn::schedule (void)
+AddOns::schedule (void)
 {
     static uint_fast16_t    addon_idx   = 0;
     static uint_fast8_t     cnt         = 0;
@@ -750,26 +686,12 @@ AddOn::schedule (void)
 
     if (cnt == 0)
     {
-        if (addon_idx < AddOn::n_addons)
+        if (addon_idx < AddOns::n_addons)
         {
-            if (AddOn::addons[addon_idx].active)
-            {
-                uint_fast8_t packet_sequence_idx = AddOn::addons[addon_idx].packet_sequence_idx;
-
-                AddOn::sendcmd (addon_idx, packet_sequence_idx);
-                packet_sequence_idx++;
-
-                if (packet_sequence_idx >= MAX_PACKET_SEQUENCES)
-                {
-                    packet_sequence_idx = 0;
-                }
-
-                AddOn::addons[addon_idx].packet_sequence_idx = packet_sequence_idx;
-            }
-
+            AddOns::addons[addon_idx].sched();
             addon_idx++;
 
-            if (addon_idx >= AddOn::n_addons)
+            if (addon_idx >= AddOns::n_addons)
             {
                 addon_idx = 0;
                 rtc = true;
@@ -795,4 +717,19 @@ AddOn::schedule (void)
     }
 
     return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  renumber () - renumber ids
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+AddOns::renumber ()
+{
+    uint_fast16_t addon_idx;
+
+    for (addon_idx = 0; addon_idx < AddOns::n_addons; addon_idx++)
+    {
+        AddOns::addons[addon_idx].set_id (addon_idx);
+    }
 }

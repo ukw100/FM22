@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------------------------------------------------------------
  * railroad.h - railroad machine management functions
  *-------------------------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,86 +21,98 @@
 #define RAILROAD_H
 
 #include <stdint.h>
+#include <string>
+#include <vector>
+#include <memory>
 
-#define MAX_RAILROAD_GROUPS                     8
-#define MAX_RAILROADS_PER_RAILROAD_GROUP        16
-
-#define MAX_SWITCHES_PER_RAILROAD               16
-
-typedef struct
-{
-    char *                      name;                                           // configuration: name of railroad
-    uint8_t                     n_switches;                                     // configuration: number of switches
-    uint16_t                    linked_loco_idx;                                // configuration: linked loco
-    uint16_t                    active_loco_idx;                                // runtime: set if RCL detector activates railroad by detected loco_idx
-    uint16_t                    located_loco_idx;                               // runtime: set if S88 contact gets occupied by active_loco_idx
-    uint16_t                    switches[MAX_SWITCHES_PER_RAILROAD];            // configuration: switch definitions
-    uint8_t                     states[MAX_SWITCHES_PER_RAILROAD];              // runtime: switch states
-} RAILROAD;
-
-typedef struct
-{
-    char *                      name;                                           // configuration: name of railroad group
-    uint8_t                     n_railroads;                                    // configuration: number of railroads
-    uint8_t                     active_railroad_idx;                            // runtime: active railroad
-    RAILROAD                    railroads[MAX_RAILROADS_PER_RAILROAD_GROUP];    // configuration: railroads, see above
-} RAILROAD_GROUP;
+#define MAX_RAILROAD_GROUPS                     254
+#define MAX_RAILROADS_PER_RAILROAD_GROUP        32
+#define MAX_SWITCHES_PER_RAILROAD               32
 
 class Railroad
 {
     public:
-        static bool             data_changed;
+                                            Railroad ();
+        void                                set_name (std::string name);
+        std::string                         get_name ();
 
-        static uint_fast8_t     group_add (void);
-        static uint_fast8_t     group_setid (uint_fast8_t rrgidx, uint_fast8_t new_rrgidx);
-        static uint_fast8_t     get_n_railroad_groups (void);
+        void                                set_link_loco (uint_fast16_t loco_idx);
+        uint_fast16_t                       get_link_loco ();
 
-        static void             group_setname (uint_fast8_t rrgidx, const char * name);
-        static char *           group_getname (uint_fast8_t rrgidx);
+        uint_fast16_t                       get_active_loco ();
+        void                                set_active_loco (uint_fast16_t loco_idx);
 
-        static uint_fast8_t     add (uint_fast8_t rrgidx);
-        static uint_fast8_t     setid (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast8_t new_rridx);
-        static uint_fast8_t     get_n_railroads (uint_fast8_t rrgidx);
+        uint_fast16_t                       get_located_loco ();
+        void                                set_located_loco (uint_fast16_t loco_idx);
 
-        static void             set_name (uint_fast8_t rrgidx, uint_fast8_t rridx, const char * name);
-        static char *           get_name (uint_fast8_t rrgidx, uint_fast8_t rridx);
+        uint_fast8_t                        add_switch ();
+        uint_fast8_t                        get_n_switches ();
 
-        static void             set_link_loco (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast16_t loco_idx);
-        static uint_fast16_t    get_link_loco (uint_fast8_t rrgidx, uint_fast8_t rridx);
-        static uint_fast8_t     get_link_railroad (uint_fast8_t rrgidx, uint_fast16_t loco_idx);
+        void                                set_switch_idx (uint_fast8_t sub_idx, uint_fast16_t sw_idx);
+        uint_fast16_t                       get_switch_idx (uint_fast8_t sub_idx);
 
-        static uint_fast16_t    get_active_loco (uint_fast8_t rrgidx, uint_fast8_t rridx);
-        static void             set_active_loco (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast16_t loco_idx);
+        void                                set_switch_state (uint_fast8_t sub_idx, uint_fast8_t state);
+        uint_fast8_t                        get_switch_state (uint_fast8_t sub_idx);
 
-        static uint_fast16_t    get_located_loco (uint_fast8_t rrgidx, uint_fast8_t rridx);
-        static void             set_located_loco (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast16_t loco_idx);
-
-        static uint_fast8_t     add_switch (uint_fast8_t rrgidx, uint_fast8_t rridx);
-        static uint_fast8_t     get_n_switches (uint_fast8_t rrgidx, uint_fast8_t rridx);
-
-        static void             set_switch_idx (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast8_t sub_idx, uint_fast16_t sw_idx);
-        static uint_fast16_t    get_switch_idx (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast8_t sub_idx);
-
-        static void             set_switch_state (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast8_t sub_idx, uint_fast8_t state);
-        static uint_fast8_t     get_switch_state (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast8_t sub_idx);
-        static void             set_new_switch_ids (uint16_t * map_new_switch_idx, uint_fast16_t n_switches);
-
-        static uint_fast8_t     del_switch (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast8_t subidx);
-        static uint_fast8_t     del (uint_fast8_t rrgidx, uint_fast8_t rridx);
-        static uint_fast8_t     group_del (uint_fast8_t rrgidx);
-
-        static void             set (uint_fast8_t rrgidx, uint_fast8_t rridx, uint_fast16_t loco_idx);
-        static void             set (uint_fast8_t rrgidx, uint_fast8_t rridx);
-        static uint_fast8_t     get (uint_fast8_t rrgidx);
-
-        static void             set_new_loco_ids (uint16_t * map_new_loco_idx, uint_fast16_t n_locos);
-
-        static void             booster_on (void);
-        static void             booster_off (void);
+        uint_fast8_t                        del_switch (uint_fast8_t subidx);
 
     private:
-        static RAILROAD_GROUP   railroad_groups[MAX_RAILROAD_GROUPS];
-        static uint_fast8_t     n_railroad_groups;
+        std::string                         name;                                           // configuration: name of railroad
+        uint8_t                             n_switches;                                     // configuration: number of switches
+        uint16_t                            linked_loco_idx;                                // configuration: linked loco
+        uint16_t                            active_loco_idx;                                // runtime: set if RCL detector activates railroad by detected loco_idx
+        uint16_t                            located_loco_idx;                               // runtime: set if S88 contact gets occupied by active_loco_idx
+        uint16_t                            switches[MAX_SWITCHES_PER_RAILROAD];            // configuration: switch definitions
+        uint8_t                             states[MAX_SWITCHES_PER_RAILROAD];              // runtime: switch states
+};
+
+class RailroadGroup
+{
+    public:
+        std::vector<Railroad>               railroads;                                      // configuration: railroads, see above
+
+                                            RailroadGroup ();
+        void                                set_id (uint_fast8_t id);
+        uint_fast8_t                        add (const Railroad& railroad);
+        uint_fast8_t                        get_n_railroads ();
+        void                                set_name (std::string name);
+        std::string                         get_name ();
+
+        uint_fast8_t                        get_link_railroad (uint_fast16_t loco_idx);
+
+        void                                set_active_railroad (uint_fast8_t rridx, uint_fast16_t loco_idx);
+        void                                set_active_railroad (uint_fast8_t rridx);
+        uint_fast8_t                        get_active_railroad ();
+
+        uint_fast8_t                        set_new_id (uint_fast8_t rridx, uint_fast8_t new_rridx);
+        void                                del (uint_fast8_t rridx);
+
+    private:
+        uint16_t                            id;
+        std::string                         name;                                           // configuration: name of railroad group
+        uint_fast8_t                        n_railroads;                                    // configuration: number of railroads
+        uint_fast8_t                        active_railroad_idx;                            // runtime: active railroad
+};
+
+class RailroadGroups
+{
+    public:
+        static bool                         data_changed;
+        static std::vector<RailroadGroup>   railroad_groups;
+
+        static void                         set_id (uint_fast8_t id);
+        static uint_fast8_t                 add (const RailroadGroup& railroad_group);
+        static void                         del (uint_fast8_t rrgidx);
+        static uint_fast8_t                 get_n_railroad_groups (void);
+        static uint_fast8_t                 set_new_id (uint_fast8_t rrgidx, uint_fast8_t new_rrgidx);
+        static void                         set_new_switch_ids (uint16_t * map_new_switch_idx, uint_fast16_t n_switches);
+        static void                         set_new_loco_ids (uint16_t * map_new_loco_idx, uint_fast16_t n_locos);
+        static void                         booster_on (void);
+        static void                         booster_off (void);
+
+    private:
+        static uint8_t                      n_railroad_groups;
+        static void                         renumber ();
 };
 
 #endif

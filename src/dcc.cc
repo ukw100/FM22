@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * dcc.cc - send DCC commands to STM32F4
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@
 #define CMD_BOOSTER_ON                  0x01
 #define CMD_BOOSTER_OFF                 0x02
 #define CMD_SET_MODE                    0x03
+#define CMD_SET_SHORTCUT                0x04
 
 #define CMD_PGM_READ_CV                 0x11
 #define CMD_PGM_WRITE_CV                0x12
@@ -72,6 +73,7 @@
 
 #define CMD_BASE_SWITCH_SET             0x61
 #define CMD_BASE_SWITCH_RESET           0x62
+#define CMD_EXT_ACCESSORY_SET           0x63
 
 #define CMD_S88_SET_N_CONTACTS          0x71
 
@@ -84,14 +86,6 @@ uint16_t                                DCC::adc_value;
 uint16_t                                DCC::rc1_value;
 uint_fast8_t                            DCC::booster_is_on;
 unsigned long                           DCC::booster_is_on_time;
-
-uint16_t                                DCC::pgm_limit;
-uint16_t                                DCC::pgm_min_lower_value;
-uint16_t                                DCC::pgm_max_lower_value;
-uint16_t                                DCC::pgm_min_upper_value;
-uint16_t                                DCC::pgm_max_upper_value;
-uint16_t                                DCC::pgm_min_cnt;
-uint16_t                                DCC::pgm_max_cnt;
 
 POM_CV                                  DCC::pom_cv;
 XPOM_CV                                 DCC::xpom_cv;
@@ -539,9 +533,7 @@ DCC::pom_read_cv (uint_fast8_t * valuep, uint_fast16_t addr, uint16_t cv)
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- * xpom_read_cv () - read value of CV
- *
- * Attention: cv_range means VVVVVVVV00 - VVVVVVVV11
+ * xpom_read_cv () - read 4 values of CVs
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
@@ -555,7 +547,7 @@ DCC::xpom_read_cv (uint_fast8_t * valuep, uint_fast8_t n, uint_fast16_t addr, ui
     buf[3] = addr & 0xFF;
     buf[4] = cv31;
     buf[5] = cv32;
-    buf[6] = cv_range;
+    buf[6] = cv_range & 0xFF;
 
     send_cmd (buf, 7, true);
 
@@ -659,6 +651,8 @@ DCC::base_switch_set (uint_fast16_t addr, uint_fast8_t nswitch)
 
 /*------------------------------------------------------------------------------------------------------------------------
  * base_switch_reset () - deactivate rail switch (base accessory decoder)
+ *
+ * This function is not used. The DCC controller currently deactivates the switch after a short time.
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
@@ -672,6 +666,41 @@ DCC::base_switch_reset (uint_fast16_t addr, uint_fast8_t nswitch)
     buf[3] = nswitch;
 
     send_cmd (buf, 4, true);
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * ext_accessory_set () send 8-bit value to extended accessory decoder
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+DCC::ext_accessory_set (uint_fast16_t addr, uint_fast8_t value)
+{
+    uint8_t         buf[4];
+
+    buf[0] = CMD_EXT_ACCESSORY_SET;
+    buf[1] = addr >> 8;
+    buf[2] = addr & 0xFF;
+    buf[3] = value;
+
+    // printf ("addr=%u value=%u\n", addr, value);
+
+    send_cmd (buf, 4, true);
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * set_shortcut_value () - set shortcut value
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+DCC::set_shortcut_value (uint_fast16_t shortcut_value)
+{
+    uint8_t         buf[3];
+
+    buf[0] = CMD_SET_SHORTCUT;
+    buf[1] = shortcut_value >> 8;
+    buf[2] = shortcut_value & 0xFF;
+
+    send_cmd (buf, 3, false);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------

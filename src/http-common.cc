@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * http-common.cc - HTTP addon routines
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,15 +25,19 @@
 #include <signal.h>
 #include <stdarg.h>
 
+#include "fm22.h"
 #include "debug.h"
 #include "fileio.h"
 #include "event.h"
 #include "userio.h"
 #include "dcc.h"
 #include "loco.h"
+#include "led.h"
 #include "rcl.h"
 #include "railroad.h"
 #include "s88.h"
+#include "switch.h"
+#include "sig.h"
 #include "addon.h"
 #include "func.h"
 #include "base.h"
@@ -42,7 +46,7 @@
 #include "http-common.h"
 
 bool                    HTTP_Common::edit_mode  = false;
-const char *            HTTP_Common::alert_msg  = (char *) 0;
+std::string             HTTP_Common::alert_msg  = "";
 static uint_fast8_t     todo_speed_deadtime     = 50;
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
@@ -51,7 +55,7 @@ static uint_fast8_t     todo_speed_deadtime     = 50;
  */
 const char * HTTP_Common::manufacturers[256] =
 {
-    (const char *) NULL,                                            // 0
+    "FM22",                                                         // 0
     "CML Electronics Limited",                                      // 1
     "Train Technology",                                             // 2
     (const char *) NULL,                                            // 3
@@ -299,8 +303,11 @@ HTTP_Common::html_header (String browsertitle, String title, String url, bool us
     String switch_color         = "blue";
     String rr_color             = "blue";
     String switch_test_color    = "blue";
+    String sig_color            = "blue";
+    String sig_test_color       = "blue";
     String s88_color            = "blue";
     String rcl_color            = "blue";
+    String led_color           = "blue";
 
     String pgm_color            = "blue";
     String pgm_info_color       = "blue";
@@ -344,6 +351,16 @@ HTTP_Common::html_header (String browsertitle, String title, String url, bool us
         switch_test_color = "red";
         control_color = "red";
     }
+    else if (url.compare ("/sig") == 0)
+    {
+        sig_color = "red";
+        control_color = "red";
+    }
+    else if (url.compare ("/sigtest") == 0)
+    {
+        sig_test_color = "red";
+        control_color = "red";
+    }
     else if (url.compare ("/s88") == 0)
     {
         s88_color = "red";
@@ -352,6 +369,11 @@ HTTP_Common::html_header (String browsertitle, String title, String url, bool us
     else if (url.compare ("/rcl") == 0)
     {
         rcl_color = "red";
+        control_color = "red";
+    }
+    else if (url.compare ("/led") == 0)
+    {
+        led_color = "red";
         control_color = "red";
     }
     else if (url.compare ("/pgminfo") == 0)
@@ -420,9 +442,10 @@ HTTP_Common::html_header (String browsertitle, String title, String url, bool us
         system_color = "red";
     }
 
-    HTTP::response += (String) "<!DOCTYPE HTML>\r\n";
-    HTTP::response += (String) "<html>\r\n";
-    HTTP::response += (String) "<head>\r\n";
+    HTTP::response += (String)
+        "<!DOCTYPE HTML>\r\n"
+        "<html>\r\n"
+        "<head>\r\n";
 
     if (use_utf8)
     {
@@ -435,133 +458,176 @@ HTTP_Common::html_header (String browsertitle, String title, String url, bool us
 
     if (browsertitle.length() == 0)
     {
-        mainbrowsertitle = (String) "DCC-Zentrale";
+        mainbrowsertitle = (String) "DCC FM22";
     }
     else
     {
-        mainbrowsertitle = (String) "DCC-Zentrale - " + browsertitle;
+        mainbrowsertitle = (String) "DCC FM22 - " + browsertitle;
     }
 
-    HTTP::response += (String) "<title>";
-    HTTP::response += (String) mainbrowsertitle;
-    HTTP::response += (String) "</title>\r\n";
-    HTTP::response += (String) "<meta name='viewport' content='width=device-width,initial-scale=1'/>\r\n";
-    HTTP::response += (String) "<style>\r\n";
-    HTTP::response += (String) "BODY { FONT-FAMILY: Helvetica,Arial; FONT-SIZE: 14px; }\r\n";
-    HTTP::response += (String) "A, U { text-decoration: none; }\r\n";
-    HTTP::response += (String) "button, input[type=button], input[type=submit], input[type=reset] { background-color: #EEEEEE; border: 1px solid #AAAAEE; }\r\n";
-    HTTP::response += (String) "button:hover, input[type=button]:hover, input[type=submit]:hover, input[type=reset] { background-color: #DDDDDD; }\r\n";
-    HTTP::response += (String) "select { background-color: #FFFFFF; border: 1px solid #AAAAEE; }\r\n";
-    HTTP::response += (String) "select:hover { background-color: #EEEEEE; }\r\n";
+    HTTP::response += (String)
+        "<title>" + mainbrowsertitle + "</title>\r\n"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'/>\r\n"
+        "<style>\r\n"
+        "BODY { FONT-FAMILY: Helvetica,Arial; FONT-SIZE: 14px; }\r\n"
+        "A, U { text-decoration: none; }\r\n"
+        "button, input[type=button], input[type=submit], input[type=reset] { background-color: #EEEEEE; border: 1px solid #AAAAEE; }\r\n"
+        "button:hover, input[type=button]:hover, input[type=submit]:hover, input[type=reset] { background-color: #DDDDDD; }\r\n"
+        "select { background-color: #FFFFFF; border: 1px solid #AAAAEE; }\r\n"
+        "select:hover { background-color: #EEEEEE; }\r\n"
+        ".estop { width:100%; height:32px; color:red; }\r\n"
+        ".estop:hover { color:white; background-color:red; }\r\n";
 
     HTTP::flush ();
 
-    HTTP::response += (String) "option.red {\r\n";
-    HTTP::response += (String) "  /* background-color: #cc0000;*/\r\n";
-    HTTP::response += (String) "  font-weight: bold;\r\n";
-    HTTP::response += (String) "  font-size: 12px;\r\n";
-    HTTP::response += (String) "  /* color: white; */\r\n";
-    HTTP::response += (String) "}\r\n";
+    HTTP::response += (String)
+        "option.red {\r\n"
+        "  /* background-color: #cc0000;*/\r\n"
+        "  font-weight: bold;\r\n"
+        "  font-size: 12px;\r\n"
+        "  /* color: white; */\r\n"
+        "}\r\n";
 
     /* On screens that are 650px or less, make content invisible */
-    HTTP::response += (String) "@media screen and (max-width: 650px) { .hide650 { display:none; }}\r\n";
-    HTTP::response += (String) "@media screen and (max-width: 600px) { .hide600 { display:none; }}\r\n";
+    HTTP::response += (String)
+        "@media screen and (max-width: 650px) { .hide650 { display:none; }}\r\n"
+        "@media screen and (max-width: 600px) { .hide600 { display:none; }}\r\n"
+        "@media screen and (max-width: 1000px) { .hide1000 { display:none; }}\r\n"
+        "@media screen and (max-width: 1200px) { .hide1200 { display:none; }}\r\n"
+        "@media screen and (max-width: 1800px) { .hide1800 { display:none; }}\r\n";
 
-    /* On screens that are 650px or less, make table width 100% */
-//  HTTP::response += (String) ".table650 { width:650px; }\r\n";
-//  HTTP::response += (String) "@media screen and (max-width: 650px) { .table650 { width:100%; }}\r\n";
-
-    HTTP::response += (String) "</style>\r\n";
-    HTTP::response += (String) "</head>\r\n";
-    HTTP::response += (String) "<body>\r\n";
-
-    HTTP::response += (String) "<script>\r\n";
-
-    HTTP::response += (String) "function on() { var http = new XMLHttpRequest(); http.open ('GET', '/action?action=on'); http.send (null);}\r\n";
-    HTTP::response += (String) "function off() { var http = new XMLHttpRequest(); http.open ('GET', '/action?action=off'); http.send (null);}\r\n";
-    HTTP::response += (String) "</script>\r\n";
+    HTTP::response += (String)
+        "</style>\r\n"
+        "</head>\r\n"
+        "<body>\r\n"
+        "<script>\r\n"
+        "function estop()"
+        "{"
+        "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=estop'); http.send (null);"
+        "  document.getElementById('estop').style.color = 'white';"
+        "  document.getElementById('estop').style.backgroundColor = 'red';"
+        "  setTimeout(function()"
+        "  {"
+        "    document.getElementById('estop').style.color = '';"
+        "    document.getElementById('estop').style.backgroundColor = '';"
+        "  }, 500);"
+        "}\r\n"
+        "window.onkeyup = function (event) { if (event.keyCode == 27) { estop(); }}\r\n"
+        "function on() { var http = new XMLHttpRequest(); http.open ('GET', '/action?action=on'); http.send (null);}\r\n"
+        "function off() { var http = new XMLHttpRequest(); http.open ('GET', '/action?action=off'); http.send (null);}\r\n"
+        "</script>\r\n";
 
     if (DCC::booster_is_on)
     {
         display_off = " style='display:none'";
+        display_on  = " style='display:inline-block'";
     }
     else
     {
-        display_on = " style='display:none'";
+        display_off = " style='display:inline-block'";
+        display_on  = " style='display:none'";
     }
 
     HTTP::flush ();
 
-    HTTP::response += (String) "<table>\r\n";
-    HTTP::response += (String) "<tr>\r\n";
-    HTTP::response += (String) "<td>";
-    HTTP::response += (String) "<div id='onmenu'"  + display_on  + " style='display:inline-block'>" + "<button style='width:100px;' onclick='off()'><font color='red'>Ausschalten</font></button>"  + "</div>";
-    HTTP::response += (String) "<div id='offmenu'" + display_off + " style='display:inline-block'>" + "<button style='width:100px;' onclick='on()'><font color='green'>Einschalten</font></button>" + "</div>\r\n";
-    HTTP::response += (String) "<td>\r\n";
-    HTTP::response += (String) "<td style='padding:2px;'>\r\n";
-    HTTP::response += (String) "  <select style='color:" + control_color + "' id='m_steuerung' onchange=\"window.location.href=document.getElementById(id).value;\">\r\n";
-    HTTP::response += (String) "      <option value='' class='red'>Steuerung</option>\r\n";
-    HTTP::response += (String) "      <option style='color:" + list_color + "' value='/loco'>Lokliste</option>\r\n";
-    HTTP::response += (String) "      <option style='color:" + addon_color + "' value='/addon'>Zusatzdecoder</option>\r\n";
-    HTTP::response += (String) "      <option style='color:" + switch_color + "' value='/switch'>Weichen</option>\r\n";
-    HTTP::response += (String) "      <option style='color:" + rr_color + "' value='/rr'>Fahrstra&szlig;en</option>\r\n";
-    HTTP::response += (String) "      <option style='color:" + switch_test_color + "' value='/swtest'>Weichentest</option>\r\n";
-    HTTP::response += (String) "      <option style='color:" + s88_color + "' value='/s88'>S88</option>\r\n";
-    HTTP::response += (String) "      <option style='color:" + rcl_color + "' value='/rcl'>RC-Detektoren</option>\r\n";
-    HTTP::response += (String) "  </select>\r\n";
-    HTTP::response += (String) "</td>\r\n";
+    HTTP::response += (String)
+        "<button class='estop' id='estop' onclick='estop()'>STOP</button><BR>"
+        "<table>\r\n"
+        "<tr>\r\n"
+        "<td>"
+        "<div id='onmenu'"  + display_on  + "><button style='width:100px;' onclick='off()'><font color='red'>Ausschalten</font></button></div>"
+        "<div id='offmenu'" + display_off + "><button style='width:100px;' onclick='on()'><font color='green'>Einschalten</font></button></div>\r\n"
+        "</td>\r\n"
+        "<td style='padding:2px;'>\r\n"
+        "  <select style='color:" + control_color + "' id='m_steuerung' onchange=\"window.location.href=document.getElementById(id).value;\">\r\n"
+        "      <option value='' class='red'>Steuerung</option>\r\n"
+        "      <option style='color:" + list_color + "' value='/loco'>Lokliste</option>\r\n"
+        "      <option style='color:" + addon_color + "' value='/addon'>Zusatzdecoder</option>\r\n"
+        "      <option style='color:" + switch_color + "' value='/switch'>Weichen</option>\r\n"
+        "      <option style='color:" + switch_test_color + "' value='/swtest'>Weichentest</option>\r\n"
+        "      <option style='color:" + rr_color + "' value='/rr'>Fahrstra&szlig;en</option>\r\n"
+        "      <option style='color:" + sig_color + "' value='/sig'>Signale</option>\r\n"
+        "      <option style='color:" + sig_test_color + "' value='/sigtest'>Signaltest</option>\r\n"
+        "      <option style='color:" + led_color + "' value='/led'>LEDs</option>\r\n"
+        "      <option style='color:" + s88_color + "' value='/s88'>S88</option>\r\n"
+        "      <option style='color:" + rcl_color + "' value='/rcl'>RC-Detektoren</option>\r\n"
+        "  </select>\r\n"
+        "</td>\r\n";
+
     HTTP::flush ();
 
     if (HTTP_Common::edit_mode)
     {
-        HTTP::response += (String) "<td style='padding:2px;'>\r\n";
-        HTTP::response += (String) "  <select style='color:" + pgm_color + "' id='m_programmierung' onchange=\"window.location.href=document.getElementById('m_programmierung').value;\">\r\n";
-        HTTP::response += (String) "    <option value='' class='red'>Programmierung</option>\r\n";
-        HTTP::response += (String) "    <option value='' disabled='disabled'>Programmiergleis:</option>\r\n";
-        HTTP::response += (String) "    <option style='color:" + pgm_info_color + "' value='/pgminfo'>&nbsp;&nbsp;Decoder-Info</option>\r\n";
-        HTTP::response += (String) "    <option style='color:" + pgm_addr_color + "' value='/pgmaddr'>&nbsp;&nbsp;Lokadresse</option>\r\n";
-        HTTP::response += (String) "    <option style='color:" + pgm_cv_color + "' value='/pgmcv'>&nbsp;&nbsp;CV</option>\r\n";
-        HTTP::response += (String) "    <option value='' disabled='disabled'>---------------------</option>\r\n";
-        HTTP::response += (String) "    <option value='' disabled='disabled'>Hauptgleis:</option>\r\n";
-        HTTP::response += (String) "    <option style='color:" + pom_info_color + ";margin-left:10px;' value='/pominfo'>&nbsp;&nbsp;Decoder-Info</option>\r\n";
-        HTTP::response += (String) "    <option style='color:" + pom_addr_color + "' value='/pomaddr'>&nbsp;&nbsp;Lokadresse</option>\r\n";
-        HTTP::response += (String) "    <option style='color:" + pom_cv_color + "' value='/pomcv'>&nbsp;&nbsp;CV</option>\r\n";
-        HTTP::response += (String) "    <option style='color:" + pom_map_color + "' value='/pommap'>&nbsp;&nbsp;Mapping</option>\r\n";
-        HTTP::response += (String) "    <option style='color:" + pom_out_color + "' value='/pomout'>&nbsp;&nbsp;Ausg&auml;nge</option>\r\n";
-        HTTP::response += (String) "  </select>\r\n";
-        HTTP::response += (String) "</td>\r\n";
+        HTTP::response += (String)
+            "<td style='padding:2px;'>\r\n"
+            "  <select style='color:" + pgm_color + "' id='m_programmierung' onchange=\"window.location.href=document.getElementById('m_programmierung').value;\">\r\n"
+            "    <option value='' class='red'>Programmierung</option>\r\n"
+            "    <option value='' disabled='disabled'>Programmiergleis:</option>\r\n"
+            "    <option style='color:" + pgm_info_color + "' value='/pgminfo'>&nbsp;&nbsp;Decoder-Info</option>\r\n"
+            "    <option style='color:" + pgm_addr_color + "' value='/pgmaddr'>&nbsp;&nbsp;Decoder-Adresse</option>\r\n"
+            "    <option style='color:" + pgm_cv_color + "' value='/pgmcv'>&nbsp;&nbsp;CV</option>\r\n"
+            "    <option value='' disabled='disabled'>---------------------</option>\r\n"
+            "    <option value='' disabled='disabled'>Hauptgleis:</option>\r\n"
+            "    <option style='color:" + pom_info_color + ";margin-left:10px;' value='/pominfo'>&nbsp;&nbsp;Decoder-Info</option>\r\n"
+            "    <option style='color:" + pom_addr_color + "' value='/pomaddr'>&nbsp;&nbsp;Decoder-Adresse</option>\r\n"
+            "    <option style='color:" + pom_cv_color + "' value='/pomcv'>&nbsp;&nbsp;CV</option>\r\n"
+            "    <option style='color:" + pom_map_color + "' value='/pommot'>&nbsp;&nbsp;Motorparameter</option>\r\n"
+            "    <option style='color:" + pom_map_color + "' value='/pommap'>&nbsp;&nbsp;F-Mapping</option>\r\n"
+            "    <option style='color:" + pom_out_color + "' value='/pomout'>&nbsp;&nbsp;F-Ausg&auml;nge</option>\r\n"
+            "  </select>\r\n"
+            "</td>\r\n";
+
         HTTP::flush ();
     }
 
-    HTTP::response += (String) "<td style='padding:2px;'>\r\n";
-    HTTP::response += (String) "  <select style='color:" + system_color + "' id='m_zentrale' onchange=\"window.location.href=document.getElementById('m_zentrale').value;\">\r\n";
-    HTTP::response += (String) "    <option value='' class='red'>Zentrale</option>\r\n";
-
-    HTTP::response += (String) "<option style='color:" + setup_color + "' value='/setup'>Einstellungen</option>\r\n";
+    HTTP::response += (String)
+        "<td style='padding:2px;'>\r\n"
+        "  <select style='color:" + system_color + "' id='m_zentrale' onchange=\"window.location.href=document.getElementById('m_zentrale').value;\">\r\n"
+        "    <option value='' class='red'>Zentrale</option>\r\n"
+        "    <option style='color:" + setup_color + "' value='/setup'>Einstellungen</option>\r\n";
 
     if (HTTP_Common::edit_mode)
     {
-        HTTP::response += (String) "<option value='' disabled='disabled'>----------------</option>\r\n";
-        HTTP::response += (String) "<option style='color:" + network_color + "' value='/net'>Netzwerk</option>\r\n";
-        HTTP::response += (String) "<option style='color:" + upload_color + "' value='/upl'>Upload Hex</option>\r\n";
-        HTTP::response += (String) "<option style='color:" + flash_color + "' value='/flash'>Flash STM32</option>\r\n";
+        HTTP::response += (String)
+            "<option value='' disabled='disabled'>----------------</option>\r\n"
+            "<option style='color:" + network_color + "' value='/net'>Netzwerk</option>\r\n"
+            "<option style='color:" + upload_color + "' value='/upl'>Upload Hex</option>\r\n"
+            "<option style='color:" + flash_color + "' value='/flash'>Flash STM32</option>\r\n";
     }
 
-    HTTP::response += (String) "    <option style='color:" + info_color + "' value='/info'>Info</option>\r\n";
-    HTTP::response += (String) "  </select>\r\n";
-    HTTP::response += (String) "</td>\r\n";
-    HTTP::response += (String) "</tr>\r\n";
-    HTTP::response += (String) "</table>\r\n";
+    HTTP::response += (String)
+        "    <option style='color:" + info_color + "' value='/info'>Info</option>\r\n"
+        "  </select>\r\n"
+        "</td>\r\n"
+        "<td><button onclick=\"window.open('" + url + "', '_blank');\">+</button></td>\r\n"
+        "<td id='iframe2' class='hide1200'><button onclick=\"window.location.href='/2';\">2</button></td>\r\n"
+        "<td id='iframe3' class='hide1800'><button onclick=\"window.location.href='/3';\">3</button></td>\r\n"
+        "<td id='iframe4' class='hide1200'><button onclick=\"window.location.href='/4';\">4</button></td>\r\n"
+        "<td id='iframe6' class='hide1800'><button onclick=\"window.location.href='/6';\">6</button></td>\r\n"
+        "</tr>\r\n"
+        "</table>\r\n";
 
-    HTTP::response += (String) "<script>";
-    HTTP::response += (String) "function rstalert() { var http = new XMLHttpRequest(); http.open ('GET', '/action?action=rstalert');";
-    HTTP::response += (String) "http.addEventListener('load',";
-    HTTP::response += (String) "function(event) { if (http.status >= 200 && http.status < 300) { ; }});";
-    HTTP::response += (String) "http.send (null);}\r\n";
-    HTTP::response += (String) "</script>\r\n";
+    HTTP::flush ();
 
-    HTTP::response += (String) "<div style='margin-left:20px'>Strom: <span style='display:inline-block; width:60px;' id='adc'>" + std::to_string(DCC::adc_value) + "</span>\r\n";
-    HTTP::response += (String) "RC1: <span id='rc1'>";
+    HTTP::response += (String)
+        "<script>"
+        "function isiFrame() { try { return window.self !== window.top; } catch (e) { return true; } }\r\n"
+        "if (isiFrame()) {\r\n"
+        "  document.getElementById('estop').style.display = 'none';\r\n"
+        "  document.getElementById('iframe2').style.display = 'none';\r\n"
+        "  document.getElementById('iframe3').style.display = 'none';\r\n"
+        "  document.getElementById('iframe4').style.display = 'none';\r\n"
+        "  document.getElementById('iframe6').style.display = 'none';\r\n"
+        "}\r\n"
+        "function rstalert() { var http = new XMLHttpRequest(); http.open ('GET', '/action?action=rstalert');"
+        "http.addEventListener('load',"
+        "function(event) { if (http.status >= 200 && http.status < 300) { ; }});"
+        "http.send (null);}\r\n"
+        "</script>\r\n";
+
+    HTTP::flush ();
+
+    HTTP::response += (String) "<div style='margin-left:20px'>RC1: <span id='rc1' style='margin-right:20px'>";
 
     if (DCC::rc1_value == 0xFFFF)
     {
@@ -572,18 +638,19 @@ HTTP_Common::html_header (String browsertitle, String title, String url, bool us
         HTTP::response += std::to_string (DCC::rc1_value);
     }
 
-    HTTP::response += (String) "</span><span style='margin-left:10px;color:red;font-weight:bold' id='alert'>";
+    HTTP::response += (String)
+        "</span>"
+        "Strom: <span style='display:inline-block; width:60px;' id='adc'>" + std::to_string(DCC::adc_value) + "</span>"
+        "<progress id='adc2' max='4096' value='0'></progress></div>"
+        "<div style='margin-top:10px;padding-top:2px;padding-bottom:2px;border:1px gray solid;width:400px;display:none' id='alert'>"
+        "<span style='margin-left:10px;color:red;font-weight:bold;' id='alertmsg'>";
 
-    if (HTTP_Common::alert_msg && *HTTP_Common::alert_msg)
-    {
-        HTTP::response += (String) HTTP_Common::alert_msg;
-    }
+    HTTP::response += (String) HTTP_Common::alert_msg;
 
-    HTTP::response += (String) "</span><span style='margin-left:10px;'><button id='rstalert' onclick='rstalert()' style='display:none'>Reset</button></span></div>\r\n";
+    HTTP::response += (String)
+        "</span><span style='margin-left:10px;float:right'><button onclick='rstalert()'>L&ouml;schen</button></span></div>\r\n"
+        "<H3 style='margin-left:20px;'>" + title + "</H3>\r\n";
 
-    HTTP::response += (String) "<H3 style='margin-left:20px;'>";
-    HTTP::response += (String) title;
-    HTTP::response += (String) "</H3>\r\n";
     HTTP::flush ();
 }
 
@@ -594,8 +661,9 @@ HTTP_Common::html_header (String browsertitle, String title, String url, bool us
 void
 HTTP_Common::html_trailer (void)
 {
-    HTTP::response += (String) "</body>\r\n";
-    HTTP::response += (String) "</html>\r\n";
+    HTTP::response += (String)
+        "</body>\r\n"
+        "</html>\r\n";
     HTTP::flush ();
 }
 
@@ -622,6 +690,7 @@ HTTP_Common::head_action (void)
     }
 
     HTTP_Common::add_action_content ("adc",  "text", std::to_string (DCC::adc_value));
+    HTTP_Common::add_action_content ("adc2", "value", std::to_string (DCC::adc_value));
 
     if (DCC::rc1_value == 0xFFFF)
     {
@@ -632,9 +701,9 @@ HTTP_Common::head_action (void)
         HTTP_Common::add_action_content ("rc1",  "text", std::to_string (DCC::rc1_value));
     }
 
-    if (alert_msg && *alert_msg)
+    if (! HTTP_Common::alert_msg.empty())
     {
-        HTTP_Common::add_action_content ("alert", "text", (alert_msg && *alert_msg) ? alert_msg : "");
+        HTTP_Common::add_action_content ("alertmsg", "text", HTTP_Common::alert_msg);
         HTTP_Common::add_action_content ("alert", "display", "");
         HTTP_Common::add_action_content ("rstalert", "display", "");
     }
@@ -659,10 +728,10 @@ HTTP_Common::handle_info (void)
     HTTP::response += (String) "<div style='margin-left:20px;'>\r\n";
     HTTP_Common::add_action_handler ("head", "", 200, true);
 
-    HTTP::response += (String) "Version DCC-Zentrale: " + VERSION + "<BR>\r\n";
-
-    HTTP::response += (String) "</span>\r\n";
-    HTTP::response += (String) "</div>\r\n";
+    HTTP::response += (String)
+        "Version DCC-Zentrale: " + VERSION + "<BR>\r\n"
+        "</span>\r\n"
+        "</div>\r\n";
     HTTP_Common::html_trailer ();
 }
 
@@ -677,15 +746,41 @@ HTTP_Common::handle_setup (void)
     String          url     = "/setup";
     const char *    action;
     uint_fast8_t    railcom_mode;
+    uint_fast16_t   shortcut_value;
     uint_fast8_t    deadtime;
     String          checked_edit = "";
     String          checked_railcom = "";
 
     action = HTTP::parameter ("action");
 
-    if (strcmp (action, "setedit") == 0)                            // action "setedit" must be handled before html_header()!
+    HTTP_Common::html_header (title, title, url, true);
+    HTTP::response += (String) "<div style='margin-left:20px;'>\r\n";
+
+    if (! strcmp (action, "savesetup"))
+    {
+        uint_fast8_t rtc;
+
+        rtc = FileIO::write_all_ini_files ();
+
+        if (rtc)
+        {
+            HTTP::response += (String) "<font color='green'>Konfiguration wurde auf Datentr&auml;ger gespeichert</font><P>";
+        }
+        else
+        {
+            HTTP::response += (String) "<font color='red'>Konfiguration konnte nicht auf Datentr&auml;ger gespeichert werden</font><P>";
+        }
+    }
+    else if (strcmp (action, "setedit") == 0)                            // action "setedit" must be handled before html_header()!
     {
         HTTP_Common::edit_mode = HTTP::parameter_number ("edit");
+    }
+    else if (strcmp (action, "setshortcut") == 0)
+    {
+        shortcut_value = HTTP::parameter_number ("shortcut");
+
+        FM22::set_shortcut_value (shortcut_value);
+        DCC::set_shortcut_value (shortcut_value);
     }
     else if (strcmp (action, "setrailcom") == 0)
     {
@@ -705,14 +800,14 @@ HTTP_Common::handle_setup (void)
         todo_speed_deadtime = HTTP::parameter_number ("deadtime");
     }
 
-    HTTP_Common::html_header (title, title, url, true);
-    HTTP::response += (String) "<div style='margin-left:20px;'>\r\n";
     HTTP_Common::add_action_handler ("head", "", 200, true);
 
     if (HTTP_Common::edit_mode)
     {
         checked_edit = "checked";
     }
+
+    shortcut_value = FM22::get_shortcut_value ();
 
     if (DCC::get_mode () == RAILCOM_MODE)
     {
@@ -730,43 +825,92 @@ HTTP_Common::handle_setup (void)
         checked_railcom = "checked";
     }
 
-    HTTP::response += (String) "<form method='GET' action='" + url + "'>\r\n";
-    HTTP::response += (String) " <div style='padding:10px;width:400px;border:1px lightgray solid'>\r\n";
-    HTTP::response += (String) "  <B>Bearbeitung:</B><P>";
-    HTTP::response += (String) "  Bearbeitung aktiv: <input type='checkbox' name='edit' value='1' " + checked_edit + ">\r\n";
-    HTTP::response += (String) "  <input type='hidden' name='action' value='setedit'>\r\n";
-    HTTP::response += (String) "  <div style='text-align:right;'><input type='submit' style='margin-left:40px' value='Speichern'></div>\r\n";
-    HTTP::response += (String) "</div></form>\r\n";
+    if (HTTP_Common::edit_mode && FM22::data_changed)
+    {
+        HTTP::response += (String)
+            "<BR><form method='get' action='" + url + "'>\r\n"
+            "<input type='hidden' name='action' value='savesetup'>\r\n"
+            "<input type='submit' value='Ge&auml;nderte Konfiguration auf Datentr&auml;ger speichern'>"
+            "</form>\r\n"
+            "<P>";
+    }
 
-    HTTP::response += (String) "<P>";
+    HTTP::response += (String)
+        "<form method='GET' action='" + url + "'>\r\n"
+        " <div style='padding:10px;width:400px;border:1px lightgray solid'>\r\n"
+        "  <B>Bearbeitung:</B><P>"
+        "  Bearbeitung aktiv: <input type='checkbox' name='edit' value='1' " + checked_edit + ">\r\n"
+        "  <input type='hidden' name='action' value='setedit'>\r\n"
+        "  <div style='text-align:right;'><input type='submit' style='margin-left:40px' value='Speichern'></div>\r\n"
+        "</div></form>\r\n"
+        "<P>";
+
     HTTP::flush ();
 
     if (HTTP_Common::edit_mode)
     {
-        HTTP::response += (String) "<form method='GET' action='" + url + "'>\r\n";
-        HTTP::response += (String) " <div style='padding:10px;width:400px;border:1px lightgray solid'>\r\n";
-        HTTP::response += (String) "  <B>RailCom:</B><P>";
-        HTTP::response += (String) "  RailCom: <input type='checkbox' name='railcom' value='1' " + checked_railcom + ">\r\n";
-        HTTP::response += (String) "  <input type='hidden' name='action' value='setrailcom'>\r\n";
-        HTTP::response += (String) "  <div style='text-align:right;'><input type='submit' style='margin-left:40px' value='Speichern'></div>\r\n";
-        HTTP::response += (String) "</div></form>\r\n";
+        HTTP::response += (String)
+            "<script>"
+            "function upd_shortcut()"
+            "{"
+            "  var slider = document.getElementById('shortcut');"
+            "  var shortcut_out = document.getElementById('shortcut_out');"
+            "  var value = parseInt(slider.value);"
+            "  shortcut_out.textContent = value;"
+            "}"
+            "function set_shortcut(value)"
+            "{"
+            "  var slider = document.getElementById('shortcut');"
+            "  var shortcut_out = document.getElementById('shortcut_out');"
+            "  slider.value = value;"
+            "  shortcut_out.textContent = value;"
+            "}"
+            "</script>\r\n"
+            "<form method='GET' action='" + url + "'>\r\n"
+            " <div style='padding:10px;width:400px;border:1px lightgray solid'>\r\n"
+            "  <B>Kurzschlusswert (Standardwert: " + std::to_string(FM22_SHORTCUT_DEFAULT) + "):</B><P>"
+            "  <div id='shortcut_out' style='width:350px;text-align:center;'>" + std::to_string(shortcut_value) + "</div>\r\n"
+            "  128\r\n"
+            "  <input type='range' min='128' max='2047' value='" + std::to_string(shortcut_value) + "' name='shortcut' id='shortcut' style='width:256px' onchange='upd_shortcut()'>\r\n"
+            "  2047\r\n"
+            "  <input type='hidden' name='action' value='setshortcut'>\r\n"
+            "  <BR><BR>"
+            "  <div>"
+            "    <div style='float: left;'><button onclick='set_shortcut(1000)'>Standard</button></div>\r\n"
+            "    <div style='float: right;'><input type='submit' style='margin-left:40px' value='Speichern'></div>\r\n"
+            "    <BR>"
+            "  </div>"
+            "</div></form>\r\n"
+            "<P>";
 
-        HTTP::response += (String) "<P>";
         HTTP::flush ();
 
-        HTTP::response += (String) "<script>function upd_slider() { var slider = document.getElementById('deadtime'); var out = document.getElementById('out'); ";
-        HTTP::response += (String) "var value = parseInt(slider.value); out.textContent = value; }</script>\r\n";
+        HTTP::response += (String)
+            "<form method='GET' action='" + url + "'>\r\n"
+            " <div style='padding:10px;width:400px;border:1px lightgray solid'>\r\n"
+            "  <B>RailCom:</B><P>"
+            "  RailCom: <input type='checkbox' name='railcom' value='1' " + checked_railcom + ">\r\n"
+            "  <input type='hidden' name='action' value='setrailcom'>\r\n"
+            "  <div style='text-align:right;'><input type='submit' style='margin-left:40px' value='Speichern'></div>\r\n"
+            "</div></form>\r\n"
+            "<P>";
 
-        HTTP::response += (String) "<form method='GET' action='" + url + "'>\r\n";
-        HTTP::response += (String) " <div style='padding:10px;width:400px;border:1px lightgray solid'>\r\n";
-        HTTP::response += (String) "  <B>Geschwindigkeitssteuerung Wii-Gamepad:</B><P>";
-        HTTP::response += (String) "  <div id='out' style='width:350px;text-align:center;'>" + std::to_string(deadtime) + "</div>\r\n";
-        HTTP::response += (String) "  Direkt\r\n";
-        HTTP::response += (String) "  <input type='range' min='0' max='255' value='" + std::to_string(deadtime) + "' name='deadtime' id='deadtime' style='width:256px' onchange='upd_slider()'>\r\n";
-        HTTP::response += (String) "  Sanft\r\n";
-        HTTP::response += (String) "  <input type='hidden' name='action' value='setdeadtime'>\r\n";
-        HTTP::response += (String) "  <div style='text-align:right;'><input type='submit' style='margin-left:40px' value='Speichern'></div>\r\n";
-        HTTP::response += (String) "</div></form>\r\n";
+        HTTP::flush ();
+
+        HTTP::response += (String)
+            "<script>function upd_slider() { var slider = document.getElementById('deadtime'); var deadtime_out = document.getElementById('deadtime_out'); "
+            "var value = parseInt(slider.value); deadtime_out.textContent = value; }</script>\r\n"
+            "<form method='GET' action='" + url + "'>\r\n"
+            " <div style='padding:10px;width:400px;border:1px lightgray solid'>\r\n"
+            "  <B>Geschwindigkeitssteuerung Wii-Gamepad:</B><P>"
+            "  <div id='deadtime_out' style='width:350px;text-align:center;'>" + std::to_string(deadtime) + "</div>\r\n"
+            "  Direkt\r\n"
+            "  <input type='range' min='0' max='255' value='" + std::to_string(deadtime) + "' name='deadtime' id='deadtime' style='width:256px' onchange='upd_slider()'>\r\n"
+            "  Sanft\r\n"
+            "  <input type='hidden' name='action' value='setdeadtime'>\r\n"
+            "  <BR><BR>"
+            "  <div style='text-align:right;'><input type='submit' style='margin-left:40px' value='Speichern'></div>\r\n"
+            "</div></form>\r\n";
 
         HTTP::flush ();
     }
@@ -806,54 +950,58 @@ HTTP_Common::add_action_handler (const char * action, const char * parameters, i
         HTTP::response += (String) "<script>\r\n";
     }
 
-    HTTP::response += (String) "function action_handler_" + action + "() {\r\n";
-    HTTP::response += (String) "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=" + action + sparam + "');\r\n";
-    HTTP::response += (String) "  http.addEventListener('load',\r\n";
-    HTTP::response += (String) "    function(event) {\r\n";
-    HTTP::response += (String) "      var i; var j;\r\n";
-    HTTP::response += (String) "      var text = http.responseText;\r\n";
-    HTTP::response += (String) "      if (http.status >= 200 && http.status < 300) {\r\n";
-    HTTP::response += (String) "        const a = text.split('\t');\r\n";
-    HTTP::response += (String) "        var l = a.length - 1;\r\n";              // -1: last element empty (trailing '\t')
-    HTTP::response += (String) "        for (i = 0; i < l; i++) {\r\n";
-    HTTP::response += (String) "          const b = a[i].split('\b');\r\n";
-    HTTP::response += (String) "          var oo = document.getElementById(b[0]);\r\n";
-    HTTP::response += (String) "          if (oo) {\r\n";
-    HTTP::response += (String) "            switch (b[1])\r\n";
-    HTTP::response += (String) "            {\r\n";
-    HTTP::response += (String) "              case 'display':\r\n";
-    HTTP::response += (String) "                oo.style.display = b[2];\r\n";
-    HTTP::response += (String) "                break;\r\n";
-    HTTP::response += (String) "              case 'value':\r\n";
-    HTTP::response += (String) "                oo.value = b[2];\r\n";
-    HTTP::response += (String) "                break;\r\n";
-    HTTP::response += (String) "              case 'text':\r\n";
-    HTTP::response += (String) "                oo.textContent = b[2];\r\n";
-    HTTP::response += (String) "                break;\r\n";
-    HTTP::response += (String) "              case 'html':\r\n";
-    HTTP::response += (String) "                oo.innerHTML = b[2];\r\n";
-    HTTP::response += (String) "                break;\r\n";
-    HTTP::response += (String) "              case 'checked':\r\n";
-    HTTP::response += (String) "                oo.checked = parseInt(b[2]);\r\n";
-    HTTP::response += (String) "                break;\r\n";
-    HTTP::response += (String) "              case 'color':\r\n";
-    HTTP::response += (String) "                oo.style.color = b[2];\r\n";
-    HTTP::response += (String) "                break;\r\n";
-    HTTP::response += (String) "              case 'bgcolor':\r\n";
-    HTTP::response += (String) "                oo.style.backgroundColor = b[2];\r\n";
-    HTTP::response += (String) "                break;\r\n";
-    HTTP::response += (String) "              default:\r\n";
-    HTTP::response += (String) "                console.log ('invalid type: ' + b[1]);\r\n";
-    HTTP::response += (String) "                break;\r\n";
-    HTTP::response += (String) "            }\r\n";
-    HTTP::response += (String) "          }\r\n";
-    HTTP::response += (String) "        }\r\n";
-    HTTP::response += (String) "      }\r\n";
-    HTTP::response += (String) "    }\r\n";
-    HTTP::response += (String) "  );\r\n";
-    HTTP::response += (String) "  http.send (null);\r\n";
-    HTTP::response += (String) "}\r\n";
-    HTTP::response += (String) "var intervalId" + action + " = window.setInterval(function(){ action_handler_" + action + " (); }, " + std::to_string(msec) + ");\r\n";
+    HTTP::response += (String)
+        "function action_handler_" + action + "() {\r\n"
+        "  var http = new XMLHttpRequest(); http.open ('GET', '/action?action=" + action + sparam + "');\r\n"
+        "  http.addEventListener('load',\r\n"
+        "    function(event) {\r\n"
+        "      var i; var j;\r\n"
+        "      var text = http.responseText;\r\n"
+        "      if (http.status >= 200 && http.status < 300) {\r\n"
+        "        const a = text.split('\t');\r\n"
+        "        var l = a.length - 1;\r\n"
+        "        for (i = 0; i < l; i++) {\r\n"
+        "          const b = a[i].split('\b');\r\n"
+        "          var oo = document.getElementById(b[0]);\r\n"
+        "          if (oo) {\r\n"
+        "            switch (b[1])\r\n"
+        "            {\r\n"
+        "              case 'display':\r\n"
+        "                oo.style.display = b[2];\r\n"
+        "                break;\r\n"
+        "              case 'value':\r\n"
+        "                oo.value = b[2];\r\n"
+        "                break;\r\n"
+        "              case 'text':\r\n"
+        "                oo.textContent = b[2];\r\n"
+        "                break;\r\n"
+        "              case 'width':\r\n"
+        "                oo.style.width = b[2];\r\n"
+        "                break;\r\n"
+        "              case 'html':\r\n"
+        "                oo.innerHTML = b[2];\r\n"
+        "                break;\r\n"
+        "              case 'checked':\r\n"
+        "                oo.checked = parseInt(b[2]);\r\n"
+        "                break;\r\n"
+        "              case 'color':\r\n"
+        "                oo.style.color = b[2];\r\n"
+        "                break;\r\n"
+        "              case 'bgcolor':\r\n"
+        "                oo.style.backgroundColor = b[2];\r\n"
+        "                break;\r\n"
+        "              default:\r\n"
+        "                console.log ('invalid type: ' + b[1]);\r\n"
+        "                break;\r\n"
+        "            }\r\n"
+        "          }\r\n"
+        "        }\r\n"
+        "      }\r\n"
+        "    }\r\n"
+        "  );\r\n"
+        "  http.send (null);\r\n"
+        "}\r\n"
+        "var intervalId" + action + " = window.setInterval(function(){ action_handler_" + action + " (); }, " + std::to_string(msec) + ");\r\n";
 
     if (do_print_script_tag)
     {
@@ -878,16 +1026,18 @@ HTTP_Common::print_id_select_list (String name, uint_fast16_t n_entries)
 {
     uint_fast16_t i;
 
-    HTTP::response += (String) "<td>Neue ID:</td><td>";
-    HTTP::response += (String) "<select id='" + name + "' name='" + name + "'>\r\n";
+    HTTP::response += (String)
+        "<td>Neue ID:</td><td>"
+        "<select id='" + name + "' name='" + name + "'>\r\n";
 
     for (i = 0; i < n_entries; i++)
     {
         HTTP::response += (String) "<option value='" + std::to_string(i) + "'>" + std::to_string(i) + "</option>\r\n";
     }
 
-    HTTP::response += (String) "</select>\r\n";
-    HTTP::response += (String) "</td>\r\n";
+    HTTP::response += (String)
+        "</select>\r\n"
+        "</td>\r\n";
 }
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
@@ -899,8 +1049,9 @@ HTTP_Common::print_id_select_list (String name, uint_fast16_t n_entries, uint_fa
 {
     uint_fast16_t i;
 
-    HTTP::response += (String) "<td>Neue ID:</td><td>";
-    HTTP::response += (String) "<select id='" + name + "' name='" + name + "'>\r\n";
+    HTTP::response += (String)
+        "<td>Neue ID:</td><td>"
+        "<select id='" + name + "' name='" + name + "'>\r\n";
 
     for (i = 0; i < n_entries; i++)
     {
@@ -914,8 +1065,9 @@ HTTP_Common::print_id_select_list (String name, uint_fast16_t n_entries, uint_fa
         }
     }
 
-    HTTP::response += (String) "</select>\r\n";
-    HTTP::response += (String) "</td>\r\n";
+    HTTP::response += (String)
+        "</select>\r\n"
+        "</td>\r\n";
 }
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
@@ -976,7 +1128,7 @@ HTTP_Common::print_loco_select_list (String name, uint_fast16_t selected_idx, ui
                 HTTP::response += (String) " selected";
             }
 
-            HTTP::response += (String) ">(Erkannte Lok '" + RCL::get_name (track_idx) + "')</option>\r\n";
+            HTTP::response += (String) ">(Erkannte Lok '" + RCL::tracks[track_idx].get_name() + "')</option>\r\n";
         }
     }
     else
@@ -984,12 +1136,12 @@ HTTP_Common::print_loco_select_list (String name, uint_fast16_t selected_idx, ui
         HTTP::response += (String) ">-- Keine --</option>\r\n";
     }
 
-    uint_fast16_t   n_locos = Loco::get_n_locos ();
+    uint_fast16_t   n_locos = Locos::get_n_locos ();
     uint_fast16_t   lidx;
 
     for (lidx = 0; lidx < n_locos; lidx++)
     {
-        char * name = Loco::get_name (lidx);
+        std::string name = Locos::locos[lidx].get_name();
 
         HTTP::response += (String) "<option value='" + std::to_string(lidx) + "'";
 
@@ -1012,7 +1164,7 @@ void
 HTTP_Common::print_addon_select_list (String name, uint_fast16_t selected_idx, uint_fast16_t show_mask)
 {
     String          style;
-    uint_fast16_t   n_addons = AddOn::get_n_addons ();
+    uint_fast16_t   n_addons = AddOns::get_n_addons ();
     uint_fast16_t   aidx;
 
     if (! (show_mask & ADDON_LIST_DO_DISPLAY))
@@ -1024,7 +1176,7 @@ HTTP_Common::print_addon_select_list (String name, uint_fast16_t selected_idx, u
 
     for (aidx = 0; aidx < n_addons; aidx++)
     {
-        char * name = AddOn::get_name (aidx);
+        std::string name = AddOns::addons[aidx].get_name ();
 
         HTTP::response += (String) "<option value='" + std::to_string(aidx) + "'";
 
@@ -1056,16 +1208,16 @@ print_addon_select_list (String name, uint_fast16_t selected_idx, uint_fast16_t 
 
     HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
 
-    uint_fast16_t   n_addons = AddOn::get_n_addons ();
-    uint_fast16_t   lidx;
+    uint_fast16_t   n_addons = AddOns::get_n_addons ();
+    uint_fast16_t   aidx;
 
-    for (lidx = 0; lidx < n_addons; lidx++)
+    for (aidx = 0; aidx < n_addons; aidx++)
     {
-        char * name = AddOn::get_name (lidx);
+        char * name = AddOns::addons[aidx].get_name ();
 
-        HTTP::response += (String) "<option value='" + std::to_string(lidx) + "'";
+        HTTP::response += (String) "<option value='" + std::to_string(aidx) + "'";
 
-        if (lidx == selected_idx)
+        if (aidx == selected_idx)
         {
             HTTP::response += (String) " selected";
         }
@@ -1078,53 +1230,86 @@ print_addon_select_list (String name, uint_fast16_t selected_idx, uint_fast16_t 
 
 #endif // 00
 
-const char *
+#if 000
+/*----------------------------------------------------------------------------------------------------------------------------------------
+ * print_led_group_select_list ()
+ *----------------------------------------------------------------------------------------------------------------------------------------
+ */
+void
+HTTP_Common::print_led_group_select_list (String name, uint_fast16_t selected_idx, bool do_display)
+{
+    String          style;
+
+    if (! do_display)
+    {
+        style = "style='display:none'";
+    }
+
+    HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
+
+    HTTP::response += (String) "<option value='255'>-- Keine --</option>\r\n";
+
+    uint_fast16_t   n_led_groups = Leds::get_n_led_groups ();
+    uint_fast16_t   led_group_idx;
+
+    for (led_group_idx = 0; led_group_idx < n_led_groups; led_group_idx++)
+    {
+        std::string name = Leds::led_groups[led_group_idx].get_name();
+
+        HTTP::response += (String) "<option value='" + std::to_string(led_group_idx) + "'";
+
+        if (led_group_idx == selected_idx)
+        {
+            HTTP::response += (String) " selected";
+        }
+
+        HTTP::response += (String) ">" + name + "</option>\r\n";
+    }
+
+    HTTP::response += (String) "</select>\r\n";
+}
+#endif
+
+std::string
 HTTP_Common::get_location (uint_fast16_t loco_idx)
 {
-    static char     location_buf[256];
     uint_fast8_t    rcllocation;
     uint_fast16_t   rrlocation;
-    const char *    location_ptr;
+    std::string     slocation;
 
-    rcllocation = Loco::get_rcllocation (loco_idx);
+    rcllocation = Locos::locos[loco_idx].get_rcllocation ();
 
     if (rcllocation != 0xFF)
     {
-        location_ptr = RCL::get_name (rcllocation);
-
-        if (! location_ptr)
+        if (rcllocation != 0xFF)
         {
-            location_ptr = "";
+            slocation = RCL::tracks[rcllocation].get_name();
+        }
+        else
+        {
+            slocation = "";
         }
     }
     else
     {
-        rrlocation = Loco::get_rrlocation (loco_idx);
+        rrlocation = Locos::locos[loco_idx].get_rrlocation ();
 
         if (rrlocation != 0xFFFF)
         {
             uint_fast8_t    rrgidx      = rrlocation >> 8;
             uint_fast8_t    rridx       = rrlocation & 0xFF;
-            char *          s1          = Railroad::group_getname (rrgidx);
-            char *          s2          = Railroad::get_name (rrgidx, rridx);
+            String          s1          = RailroadGroups::railroad_groups[rrgidx].get_name();
+            String          s2          = RailroadGroups::railroad_groups[rrgidx].railroads[rridx].get_name();
 
-            if (s1 && s2 && *s1 && *s2)
-            {
-                sprintf (location_buf, "%s - %s", s1, s2);
-                location_ptr = location_buf;
-            }
-            else
-            {
-                location_ptr = "";
-            }
+            slocation = s1 + " - " + s2;
         }
         else
         {
-            location_ptr = "";
+            slocation = "";
         }
     }
 
-    return location_ptr;
+    return slocation;
 }
 
 void
@@ -1188,15 +1373,15 @@ HTTP_Common::print_start_list (String name, uint_fast16_t selected_start, bool d
         {
             if (start < 1200)
             {
-                sprintf (buf, "nach %0.1f sec f&uuml;r", (float) start / 10);
+                sprintf (buf, "nach %0.1f sec", (float) start / 10);
             }
             else if (start < 3000)
             {
-                sprintf (buf, "nach %u sec f&uuml;r", (unsigned int) (start / 10));
+                sprintf (buf, "nach %u sec", (unsigned int) (start / 10));
             }
             else
             {
-                sprintf (buf, "nach %u min f&uuml;r", (unsigned int) (start / 600));
+                sprintf (buf, "nach %u min", (unsigned int) (start / 600));
             }
         }
 
@@ -1294,14 +1479,15 @@ HTTP_Common::print_fwd_list (String name, uint_fast8_t selected_fwd, bool do_dis
     }
 
 
-    HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
-    HTTP::response += (String) "<option value='0' " + selected0 + ">R&uuml;ckw&auml;rts</option>\r\n";
-    HTTP::response += (String) "<option value='1' " + selected1 + ">Vorw&auml;rts</option>\r\n";
-    HTTP::response += (String) "</select>\r\n";
+    HTTP::response += (String)
+        "<select " + style + " name='" + name + "' id='" + name + "'>\r\n"
+        "<option value='0' " + selected0 + ">R&uuml;ckw&auml;rts</option>\r\n"
+        "<option value='1' " + selected1 + ">Vorw&auml;rts</option>\r\n"
+        "</select>\r\n";
 }
 
 void
-HTTP_Common::print_function_list (String name, uint_fast16_t selected_f, bool do_display)
+HTTP_Common::print_loco_function_list (String name, uint_fast16_t selected_f, bool do_display)
 {
     String          style;
     uint_fast8_t    f;
@@ -1329,7 +1515,7 @@ HTTP_Common::print_function_list (String name, uint_fast16_t selected_f, bool do
 }
 
 void
-HTTP_Common::print_function_list (uint_fast16_t loco_or_addon_idx, bool is_loco, String name, uint_fast16_t selected_fidx, bool do_display)
+HTTP_Common::print_loco_function_list (uint_fast16_t loco_or_addon_idx, bool is_loco, String name, uint_fast16_t selected_fidx, bool do_display)
 {
     String          style;
     String          funcname;
@@ -1348,22 +1534,22 @@ HTTP_Common::print_function_list (uint_fast16_t loco_or_addon_idx, bool is_loco,
 
         if (is_loco)
         {
-            function_name_idx = Loco::get_function_name_idx (loco_or_addon_idx, fidx);
+            function_name_idx = Locos::locos[loco_or_addon_idx].get_function_name_idx (fidx);
         }
         else
         {
-            function_name_idx = AddOn::get_function_name_idx (loco_or_addon_idx, fidx);
+            function_name_idx = AddOns::addons[loco_or_addon_idx].get_function_name_idx (fidx);
         }
 
         if (function_name_idx != 0xFFFF)
         {
             if (is_loco)
             {
-                funcname = Loco::get_function_name (loco_or_addon_idx, fidx);
+                funcname = Locos::locos[loco_or_addon_idx].get_function_name (fidx);
             }
             else
             {
-                funcname = AddOn::get_function_name (loco_or_addon_idx, fidx);
+                funcname = AddOns::addons[loco_or_addon_idx].get_function_name (fidx);
             }
 
             HTTP::response += (String) "<option value='" + std::to_string(fidx) + "'";
@@ -1412,7 +1598,7 @@ HTTP_Common::print_loco_macro_list (String name, uint_fast16_t selected_m, bool 
         }
         else
         {
-            HTTP::response += (String) ">M" + std::to_string(m) + "</option>\r\n";
+            HTTP::response += (String) ">M" + std::to_string(m + 1) + "</option>\r\n";
         }
     }
 
@@ -1420,10 +1606,10 @@ HTTP_Common::print_loco_macro_list (String name, uint_fast16_t selected_m, bool 
 }
 
 void
-HTTP_Common::print_railroad_group_list (String name, uint_fast8_t rrgidx, bool do_display)
+HTTP_Common::print_railroad_group_list (String name, uint_fast8_t rrgidx, bool do_display_norrg, bool do_display)
 {
     String          style;
-    uint_fast8_t    n_railroad_groups   = Railroad::get_n_railroad_groups ();
+    uint_fast8_t    n_railroad_groups   = RailroadGroups::get_n_railroad_groups ();
     uint_fast8_t    idx;
 
     if (! do_display)
@@ -1437,8 +1623,25 @@ HTTP_Common::print_railroad_group_list (String name, uint_fast8_t rrgidx, bool d
 
     HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
 
+    if (do_display_norrg)
+    {
+        String  selected;
+
+        if (rrgidx == 0xFF)
+        {
+            selected = "selected";
+        }
+        else
+        {
+            selected = "";
+        }
+
+        HTTP::response += (String) "<option value='255' " + selected + ">---</option>\r\n";
+    }
+
     for (idx = 0; idx < n_railroad_groups; idx++)
     {
+        RailroadGroup * rrg = &RailroadGroups::railroad_groups[idx];
         String          selected;
 
         if (idx == rrgidx)
@@ -1450,7 +1653,7 @@ HTTP_Common::print_railroad_group_list (String name, uint_fast8_t rrgidx, bool d
             selected = "";
         }
 
-        HTTP::response += (String) "<option value='" + std::to_string(idx) + "' " + selected + ">" + Railroad::group_getname (idx) + "</option>\r\n";
+        HTTP::response += (String) "<option value='" + std::to_string(idx) + "' " + selected + ">" + rrg->get_name() + "</option>\r\n";
     }
 
     HTTP::response += (String) "</select>\r\n";
@@ -1460,7 +1663,7 @@ void
 HTTP_Common::print_railroad_list (String name, uint_fast16_t linkedrr, bool do_allow_none, bool do_display)
 {
     String          style;
-    uint_fast8_t    n_railroad_groups   = Railroad::get_n_railroad_groups ();
+    uint_fast8_t    n_railroad_groups   = RailroadGroups::get_n_railroad_groups ();
     uint_fast8_t    rrgidx;
     uint_fast8_t    rridx;
 
@@ -1482,18 +1685,20 @@ HTTP_Common::print_railroad_list (String name, uint_fast16_t linkedrr, bool do_a
 
     for (rrgidx = 0; rrgidx < n_railroad_groups; rrgidx++)
     {
-        uint_fast8_t    n_railroads = Railroad::get_n_railroads (rrgidx);
+        RailroadGroup * rrg         = &RailroadGroups::railroad_groups[rrgidx];
+        uint_fast8_t    n_railroads = rrg->get_n_railroads();
 
         for (rridx = 0; rridx < n_railroads; rridx++)
         {
             String          selected;
             String          sloco_name;
-            uint_fast16_t   loco_idx    = Railroad::get_link_loco (rrgidx, rridx);
+            Railroad *      rr          = &(rrg->railroads[rridx]);
+            uint_fast16_t   loco_idx    = rr->get_link_loco ();
             uint_fast16_t   lrr         = (rrgidx << 8) | rridx;
 
             if (loco_idx != 0xFFFF)
             {
-                sloco_name = std::to_string(loco_idx) + " " + Loco::get_name (loco_idx);
+                sloco_name = std::to_string(loco_idx) + " " + Locos::locos[loco_idx].get_name ();
             }
             else
             {
@@ -1509,8 +1714,8 @@ HTTP_Common::print_railroad_list (String name, uint_fast16_t linkedrr, bool do_a
                 selected = "";
             }
 
-            HTTP::response += (String) "<option value='" + std::to_string(lrr) + "' " + selected + ">"
-                        + Railroad::group_getname (rrgidx) + " - " + Railroad::get_name (rrgidx, rridx) + " (" + sloco_name + ")</option>\r\n";
+            HTTP::response  += (String) "<option value='" + std::to_string(lrr) + "' " + selected + ">"
+                            + rrg->get_name() + " - " + rr->get_name() + " (" + sloco_name + ")</option>\r\n";
         }
     }
 
@@ -1548,10 +1753,356 @@ HTTP_Common::print_s88_list (String name, uint_fast16_t coidx, bool do_display)
             selected = "";
         }
 
-        HTTP::response += (String) "<option value='" + std::to_string(idx) + "' " + selected + ">" + S88::get_name (idx) + "</option>\r\n";
+        HTTP::response += (String) "<option value='" + std::to_string(idx) + "' " + selected + ">" + S88::contacts[idx].get_name() + "</option>\r\n";
     }
 
     HTTP::response += (String) "</select>\r\n";
+}
+
+void
+HTTP_Common::print_switch_list (String name, uint_fast16_t swidx, bool do_display)
+{
+    String          style;
+    uint_fast16_t   n_switches = Switches::get_n_switches ();
+    uint_fast16_t   idx;
+
+    if (! do_display)
+    {
+        style = "style='display:none'";
+    }
+    else
+    {
+        style = "";
+    }
+
+    HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
+
+    for (idx = 0; idx < n_switches; idx++)
+    {
+        String          selected;
+
+        if (idx == swidx)
+        {
+            selected = "selected";
+        }
+        else
+        {
+            selected = "";
+        }
+
+        HTTP::response += (String) "<option value='" + std::to_string(idx) + "' " + selected + ">" + Switches::switches[idx].get_name() + "</option>\r\n";
+    }
+
+    HTTP::response += (String) "</select>\r\n";
+}
+
+void
+HTTP_Common::print_switch_state_list (String name, uint_fast8_t swstate, bool do_display)
+{
+    String          style;
+    String          selected_branch;
+    String          selected_straight;
+    String          selected_branch2;
+
+    if (swstate == DCC_SWITCH_STATE_BRANCH)
+    {
+        selected_branch = "selected";
+    }
+    else
+    {
+        selected_branch = "";
+    }
+
+    if (swstate == DCC_SWITCH_STATE_BRANCH)
+    {
+        selected_straight = "selected";
+    }
+    else
+    {
+        selected_straight = "";
+    }
+
+    if (swstate == DCC_SWITCH_STATE_BRANCH2)
+    {
+        selected_branch2 = "selected";
+    }
+    else
+    {
+        selected_branch2 = "";
+    }
+
+    if (! do_display)
+    {
+        style = "style='display:none'";
+    }
+    else
+    {
+        style = "";
+    }
+
+    HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
+    HTTP::response += (String) "<option value='" + std::to_string(DCC_SWITCH_STATE_STRAIGHT) + "' " + selected_straight + ">Gerade</option>\r\n";
+    HTTP::response += (String) "<option value='" + std::to_string(DCC_SWITCH_STATE_BRANCH) + "' " + selected_branch + ">Abzweig</option>\r\n";
+    HTTP::response += (String) "<option value='" + std::to_string(DCC_SWITCH_STATE_BRANCH2) + "' " + selected_branch2 + ">Abzweig2</option>\r\n";
+    HTTP::response += (String) "</select>\r\n";
+}
+
+void
+HTTP_Common::print_signal_list (String name, uint_fast16_t swidx, bool do_display)
+{
+    String          style;
+    uint_fast16_t   n_signals = Signals::get_n_signals ();
+    uint_fast16_t   idx;
+
+    if (! do_display)
+    {
+        style = "style='display:none'";
+    }
+    else
+    {
+        style = "";
+    }
+
+    HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
+
+    for (idx = 0; idx < n_signals; idx++)
+    {
+        String          selected;
+
+        if (idx == swidx)
+        {
+            selected = "selected";
+        }
+        else
+        {
+            selected = "";
+        }
+
+        HTTP::response += (String) "<option value='" + std::to_string(idx) + "' " + selected + ">" + Signals::signals[idx].get_name() + "</option>\r\n";
+    }
+
+    HTTP::response += (String) "</select>\r\n";
+}
+
+void
+HTTP_Common::print_signal_state_list (String name, uint_fast8_t sigstate, bool do_display)
+{
+    String          style;
+    String          selected_halt;
+    String          selected_go;
+
+    if (sigstate == DCC_SIGNAL_STATE_HALT) 
+    {
+        selected_halt = "selected";
+    }
+    else
+    {
+        selected_halt = "";
+    }
+
+    if (sigstate == DCC_SIGNAL_STATE_GO)
+    {
+        selected_go = "selected";
+    }
+    else
+    {
+        selected_go = "";
+    }
+
+    if (! do_display)
+    {
+        style = "style='display:none'";
+    }
+    else
+    {
+        style = "";
+    }
+
+    HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
+    HTTP::response += (String) "<option value='" + std::to_string(DCC_SIGNAL_STATE_HALT) + "' " + selected_halt + ">Halt</option>\r\n";
+    HTTP::response += (String) "<option value='" + std::to_string(DCC_SIGNAL_STATE_GO) + "' " + selected_go + ">Fahrt</option>\r\n";
+    HTTP::response += (String) "</select>\r\n";
+}
+
+void
+HTTP_Common::print_led_group_list (String name, uint_fast16_t swidx, bool do_display)
+{
+    String          style;
+    uint_fast16_t   n_led_groups = Leds::get_n_led_groups ();
+    uint_fast16_t   idx;
+
+    if (! do_display)
+    {
+        style = "style='display:none'";
+    }
+    else
+    {
+        style = "";
+    }
+
+    HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
+
+    for (idx = 0; idx < n_led_groups; idx++)
+    {
+        String          selected;
+
+        if (idx == swidx)
+        {
+            selected = "selected";
+        }
+        else
+        {
+            selected = "";
+        }
+
+        HTTP::response += (String) "<option value='" + std::to_string(idx) + "' " + selected + ">" + Leds::led_groups[idx].get_name() + "</option>\r\n";
+    }
+
+    HTTP::response += (String) "</select>\r\n";
+}
+
+void
+HTTP_Common::print_script_led_mask_list (void)
+{
+    HTTP::response += (String)
+        "<script>"
+        "function toggle_led (id, led_idx)\r\n"
+        "{\r\n"
+        "  var obj = document.getElementById(id + 'v');\r\n"
+        "  if (obj)\r\n"
+        "  {\r\n"
+        "    var idl = id + '_' + led_idx;\r\n"
+        "    if (obj.value & (1 << led_idx))\r\n"
+        "    {\r\n"
+        "       obj.value &= ~(1<<led_idx);\r\n"
+        "       document.getElementById(idl).style.color = '';\r\n"
+        "       document.getElementById(idl).style.backgroundColor = '';\r\n"
+        "    }\r\n"
+        "    else\r\n"
+        "    {\r\n"
+        "       obj.value |= (1<<led_idx);\r\n"
+        "       document.getElementById(idl).style.color = 'white';\r\n"
+        "       document.getElementById(idl).style.backgroundColor = 'green';\r\n"
+        "    }\r\n"
+        "  }\r\n"
+        "}\r\n"
+        "</script>\r\n";
+}
+
+void
+HTTP_Common::print_led_mask_list (String name, uint_fast8_t ledmask, bool do_display)
+{
+    String          style;
+    uint_fast8_t    led_idx;
+
+    if (! do_display)
+    {
+        style = "style='display:none'";
+    }
+    else
+    {
+        style = "";
+    }
+
+    HTTP::response += (String) "<input type='hidden'  id='" + name + "v' name='" + name + "' value='" + std::to_string(ledmask) + "'>\r\n";
+    HTTP::response += (String) "<span " + style + " id='" + name + "'>\r\n";
+
+    for (led_idx = 0; led_idx < 8; led_idx++)
+    {
+        uint_fast8_t mask = 1 << led_idx;
+
+        if (ledmask & mask) 
+        {
+            style = "style='color:white;background-color:green'";
+        }
+        else
+        {
+            style = "";
+        }
+
+        String si = std::to_string(led_idx);
+        String id = name + "_" + si;
+
+        HTTP::response += (String)
+            "<button type='button' id='" + id + "' " + style + " onclick=\"toggle_led('" + name + "'," + si + ")\">" + si + "</button>\r\n";
+    }
+
+    HTTP::response += (String) "</span>\r\n";
+}
+
+void
+HTTP_Common::print_ledon_list (String name, uint_fast8_t ledon, bool do_display)
+{
+    String          style;
+    String          selected_off;
+    String          selected_on;
+
+    if (ledon)
+    {
+        selected_on = "selected";
+        selected_off = "";
+    }
+    else
+    {
+        selected_on = "";
+        selected_off = "selected";
+    }
+
+    if (! do_display)
+    {
+        style = "style='display:none'";
+    }
+    else
+    {
+        style = "";
+    }
+
+    HTTP::response += (String) "<select " + style + " name='" + name + "' id='" + name + "'>\r\n";
+    HTTP::response += (String) "<option value='0' " + selected_off + ">Aus</option>\r\n";
+    HTTP::response += (String) "<option value='1' " + selected_on  + ">Ein</option>\r\n";
+    HTTP::response += (String) "</select>\r\n";
+}
+
+void
+HTTP_Common::print_rcl_condition_list (bool in, uint_fast8_t caidx, uint_fast8_t condition, uint_fast8_t destination)
+{
+    String  sprefix;
+    String  sname;
+    String  scaidx = std::to_string(caidx);
+    bool    do_display_rrg = true;
+
+    if (in)
+    {
+        sprefix = "i";
+    }
+    else
+    {
+        sprefix = "o";
+    }
+
+    sname = sprefix + "cc" + scaidx;
+
+    HTTP::response += (String) "<select name='" + sname + "' id='" + sname + "' onchange=\"changecc('" + sprefix + "', " + scaidx + ")\">\r\n";
+
+    String selected[4];
+
+    if (condition < 4)
+    {
+        selected[condition] = "selected";
+    }
+
+    if (condition == RCL_CONDITION_NEVER || condition == RCL_CONDITION_ALWAYS)
+    {
+        do_display_rrg = false;
+    }
+
+    HTTP::response += (String) "<option value=0 " + selected[0] + ">---</option>\r\n";
+    HTTP::response += (String) "<option value=1 " + selected[1] + ">Immer</option>\r\n";
+    HTTP::response += (String) "<option value=2 " + selected[2] + ">Ziel ist</option>\r\n";
+    HTTP::response += (String) "<option value=3 " + selected[3] + ">Ziel ist nicht</option>\r\n";
+    HTTP::response += (String) "</select>\r\n";
+
+    HTTP_Common::print_railroad_group_list (sprefix + "cd" + scaidx, destination, true, do_display_rrg);
 }
 
 static void
@@ -1576,49 +2127,49 @@ print_rcl_action (uint_fast8_t idx, uint_fast8_t action)
 
         case RCL_ACTION_SET_LOCO_SPEED:                                                 // parameters: START, LOCO_IDX, SPEED, TENTHS
         {
-            HTTP::response += (String) "Setze Geschwindigkeit von Lok";
+            HTTP::response += (String) "Setze Geschwindigkeit";
             break;
         }
 
         case RCL_ACTION_SET_LOCO_MIN_SPEED:                                             // parameters: START, LOCO_IDX, SPEED, TENTHS
         {
-            HTTP::response += (String) "Setze Mindestgeschwindigkeit von Lok";
+            HTTP::response += (String) "Setze Mindestgeschwindigkeit";
             break;
         }
 
         case RCL_ACTION_SET_LOCO_MAX_SPEED:                                             // parameters: START, LOCO_IDX, SPEED, TENTHS
         {
-            HTTP::response += (String) "Setze H&ouml;chstgeschwindigkeit von Lok";
+            HTTP::response += (String) "Setze H&ouml;chstgeschwindigkeit";
             break;
         }
 
         case RCL_ACTION_SET_LOCO_FORWARD_DIRECTION:                                     // parameters: START, LOCO_IDX, FWD
         {
-            HTTP::response += (String) "Setze Richtung von Lok";
+            HTTP::response += (String) "Setze Richtung";
             break;
         }
 
         case RCL_ACTION_SET_LOCO_ALL_FUNCTIONS_OFF:                                     // parameters: START, LOCO_IDX
         {
-            HTTP::response += (String) "Schalte alle Funktionen aus von Lok";
+            HTTP::response += (String) "Schalte alle Funktionen aus";
             break;
         }
 
         case RCL_ACTION_SET_LOCO_FUNCTION_OFF:                                          // parameters: START, LOCO_IDX, FUNC_IDX
         {
-            HTTP::response += (String) "Schalte Funktion aus von Lok";
+            HTTP::response += (String) "Schalte Funktion aus";
             break;
         }
 
         case RCL_ACTION_SET_LOCO_FUNCTION_ON:                                           // parameters: START, LOCO_IDX, FUNC_IDX
         {
-            HTTP::response += (String) "Schalte Funktion ein von Lok";
+            HTTP::response += (String) "Schalte Funktion ein";
             break;
         }
 
         case RCL_ACTION_EXECUTE_LOCO_MACRO:                                             // parameters: START, LOCO_IDX, MACRO_IDX
         {
-            HTTP::response += (String) "F&uuml;hre Macro aus f&uuml;r Lok";
+            HTTP::response += (String) "F&uuml;hre Lok-Macro aus";
             break;
         }
 
@@ -1663,6 +2214,30 @@ print_rcl_action (uint_fast8_t idx, uint_fast8_t action)
             HTTP::response += (String) "Warte auf freien S88-Kontakt, Halt";
             break;
         }
+
+        case RCL_ACTION_SET_LOCO_DESTINATION:                                           // parameters: LOCO_IDX, RRG_IDX
+        {
+            HTTP::response += (String) "Setze Ziel";
+            break;
+        }
+
+        case RCL_ACTION_SET_LED:                                                        // parameters: START, LG_IDX, LED_MASK, LED_ON
+        {
+            HTTP::response += (String) "Schalte LED";
+            break;
+        }
+
+        case RCL_ACTION_SET_SWITCH:                                                     // parameters: START, SW_IDX, SW_STATE
+        {
+            HTTP::response += (String) "Schalte Weiche";
+            break;
+        }
+
+        case RCL_ACTION_SET_SIGNAL:                                                     // parameters: START, SIG_IDX, SIG_STATE
+        {
+            HTTP::response += (String) "Schalte Signal";
+            break;
+        }
     }
 
     HTTP::response += (String) "</option>\r\n";
@@ -1691,6 +2266,109 @@ HTTP_Common::print_rcl_action_list (bool in, uint_fast8_t caidx, uint_fast8_t ac
 }
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
+ * decoder_railcom ()
+ *
+ * addr == 0 : PGM
+ * addr >  0 : POM
+ *----------------------------------------------------------------------------------------------------------------------------------------
+ */
+void
+HTTP_Common::decoder_railcom (uint_fast16_t addr, uint_fast8_t cv28, uint_fast8_t cv29)
+{
+    HTTP::response += (String)
+        "<P><form><table style='border:1px lightgray solid;width:480px'>\r\n"
+        "<tr bgcolor='#E0E0E0'><th colspan='2'>RailCom-Konfiguration (CV28)</th></tr>\r\n";
+
+    String          rc1_checked             = "";
+    String          rc2_checked             = "";
+    String          rc1_auto_checked        = "";
+    String          reserved_bit3_checked   = "";
+    String          long_addr_3_checked     = "";
+    String          reserved_bit5_checked   = "";
+    String          high_current_checked    = "";
+    String          logon_checked           = "";
+
+    if (cv28 & 0x01)
+    {
+        rc1_checked = "checked";
+    }
+
+    if (cv28 & 0x02)
+    {
+        rc2_checked = "checked";
+    }
+
+    if (cv28 & 0x04)
+    {
+        rc1_auto_checked = "checked";
+    }
+
+    if (cv28 & 0x08)
+    {
+        reserved_bit3_checked = "checked";
+    }
+
+    if (cv28 & 0x10)
+    {
+        long_addr_3_checked = "checked";
+    }
+
+    if (cv28 & 0x20)
+    {
+        reserved_bit5_checked = "checked";
+    }
+
+    if (cv28 & 0x40)
+    {
+        high_current_checked = "checked";
+    }
+
+    if (cv28 & 0x80)
+    {
+        logon_checked = "checked";
+    }
+
+    if (cv29 & 0x80)    // accessory decoder
+    {
+        HTTP::response += (String)
+            "<tr><td>Reserviert</td><td align='center'><input type='checkbox' name='rc1' value='1' " + rc1_checked + "></td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Freigabe Kanal 2</td><td align='center'><input type='checkbox' name='rc2' value='2' " + rc2_checked + "></td></tr>\r\n"
+            "<tr><td>Reserviert</td><td align='center'><input type='checkbox' name='rc1_auto' value='4' " + rc1_auto_checked + "></td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Reserviert</td><td align='center'><input type='checkbox' name='reserved_bit3' value='8' " + reserved_bit3_checked + "></td></tr>\r\n"
+            "<tr><td>Reserviert</td><td align='center'><input type='checkbox' name='long_addr_3' value='16' " + long_addr_3_checked + "></td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Reserviert</td><td align='center'><input type='checkbox' name='reserved_bit5' value='32' " + reserved_bit5_checked + "></td></tr>\r\n"
+            "<tr><td>Freigabe Hochstrom-RailCom</td><td align='center'><input type='checkbox' name='high_current' value='64' " + high_current_checked + "></td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Freigabe Automatische Anmeldung</td><td align='center'><input type='checkbox' name='logon' value='128' " + logon_checked + "></td></tr>\r\n"
+            "<tr><td>";
+    }
+    else
+    {
+        HTTP::response += (String)
+            "<tr><td>Freigabe Kanal 1</td><td align='center'><input type='checkbox' name='rc1' value='1' " + rc1_checked + "></td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Freigabe Kanal 2</td><td align='center'><input type='checkbox' name='rc2' value='2' " + rc2_checked + "></td></tr>\r\n"
+            "<tr><td>Kanal 1 automatisch abschalten</td><td align='center'><input type='checkbox' name='rc1_auto' value='4' " + rc1_auto_checked + "></td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Reserviert</td><td align='center'><input type='checkbox' name='reserved_bit3' value='8' " + reserved_bit3_checked + "></td></tr>\r\n"
+            "<tr><td>Programmieradresse 0003 (Lange Adresse 3)</td><td align='center'><input type='checkbox' name='long_addr_3' value='16' " + long_addr_3_checked + "></td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Reserviert</td><td align='center'><input type='checkbox' name='reserved_bit5' value='32' " + reserved_bit5_checked + "></td></tr>\r\n"
+            "<tr><td>Freigabe Hochstrom-RailCom</td><td align='center'><input type='checkbox' name='high_current' value='64' " + high_current_checked + "></td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Freigabe Automatische Anmeldung</td><td align='center'><input type='checkbox' name='logon' value='128' " + logon_checked + "></td></tr>\r\n"
+            "<tr><td>";
+    }
+
+    HTTP::flush ();
+
+    if (addr > 0) // pom
+    {
+        HTTP::response += (String) "<input type='hidden' name='addr' value='" + std::to_string(addr) + "'>";
+    }
+
+    HTTP::response += (String)
+        "<input type='hidden' name='action' value='save_cv28'>"
+        "</td><td align='right'><input type='submit' value='Speichern'></td></tr>\r\n"
+        "</table></form>\r\n";
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------
  * decoder_configuration ()
  *
  * addr == 0 : PGM
@@ -1700,16 +2378,18 @@ HTTP_Common::print_rcl_action_list (bool in, uint_fast8_t caidx, uint_fast8_t ac
 void
 HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_fast8_t cv1, uint_fast8_t cv9, uint_fast16_t cv17_18)
 {
-    uint_fast8_t    reserved;
+    uint_fast8_t    reserved = 0;
 
-    HTTP::response += (String) "<P><form><table style='border:1px lightgray solid;'>\r\n";
-    HTTP::response += (String) "<tr bgcolor='#E0E0E0'><th colspan='2'>Decoder-Konfiguration (CV29)</th></tr>\r\n";
+    HTTP::response += (String)
+        "<P><form><table style='border:1px lightgray solid;width:480px'>\r\n"
+        "<tr bgcolor='#E0E0E0'><th colspan='2'>Decoder-Konfiguration (CV29)</th></tr>\r\n";
 
     if (cv29 & 0x80)      // Zubehoerdecoder
     {
-        HTTP::response += (String) "<tr bgcolor='#E0E0E0'><td>Freigabe RailCom</td><td>" + ((cv29 & 0x08) ? "Ja" : "Nein") + "</td></tr>\r\n";
-        HTTP::response += (String) "<tr><td>Decoder Typ</td><td>" + ((cv29 & 0x20) ? "Erweiteter" : "Einfacher") + " Zubeh&ouml;rdecoder</td></tr>\r\n";
-        HTTP::response += (String) "<tr><td>Adressierung</td><td>" + ((cv29 & 0x40) ? "Ausgang" : "Decoder") + "</td></tr>\r\n";
+        HTTP::response += (String)
+            "<tr bgcolor='#E0E0E0'><td>Freigabe RailCom</td><td>" + ((cv29 & 0x08) ? "Ja" : "Nein") + "</td></tr>\r\n"
+            "<tr><td>Decoder Typ</td><td>" + ((cv29 & 0x20) ? "Erweiteter" : "Einfacher") + " Zubeh&ouml;rdecoder</td></tr>\r\n"
+            "<tr><td>Adressierung</td><td>" + ((cv29 & 0x40) ? "Ausgang" : "Decoder") + "</td></tr>\r\n";
 
         HTTP::response += (String) "<tr bgcolor='#E0E0E0'><td>Aktive Adresse</td><td><font color='blue'>"
                 + ((cv9 != 0) ? ((String) "Erweiterte Adresse " + std::to_string((cv9 << 8) + cv1)) : ((String) "Basisadresse " + std::to_string(cv1)))
@@ -1733,7 +2413,7 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
         String          zubehoer_no_selected        = "";
         String          zubehoer_yes_selected       = "";
 
-        HTTP::response += (String) "<tr><td>Richtung</td><td>";
+        HTTP::response += (String) "<tr><td>Richtung</td><td align='right'>";
 
         if (cv29 & 0x01)
         {
@@ -1744,10 +2424,11 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
             direction_normal_selected = "selected";
         }
 
-        HTTP::response += (String) "<select name='direction' style='width:180px'><option value='0' " + direction_normal_selected + ">normal</option><option value='1' " + direction_invers_selected + ">invers</option></select>";
-        HTTP::response += (String) "</td></tr>\r\n";
+        HTTP::response += (String)
+            "<select name='direction' style='width:180px'><option value='0' " + direction_normal_selected + ">normal</option><option value='1' " + direction_invers_selected + ">invers</option></select>"
+            "</td></tr>\r\n";
 
-        HTTP::response += (String) "<tr bgcolor='#E0E0E0'><td>Fahrstufen</td><td>";
+        HTTP::response += (String) "<tr bgcolor='#E0E0E0'><td>Fahrstufen</td><td align='right'>";
 
         if (cv29 & 0x02)
         {
@@ -1758,10 +2439,10 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
             speed_steps14_selected = "selected";
         }
 
-        HTTP::response += (String) "<select name='steps' style='width:180px'><option value='0' " + speed_steps14_selected + ">14</option><option value='2' " + speed_steps128_selected + ">28/128</option></select>";
-        HTTP::response += (String) "</td></tr>\r\n";
-
-        HTTP::response += (String) "<tr><td>Freigabe Analogbetrieb</td><td>";
+        HTTP::response += (String)
+            "<select name='steps' style='width:180px'><option value='0' " + speed_steps14_selected + ">14</option><option value='2' " + speed_steps128_selected + ">28/128</option></select>"
+            "</td></tr>\r\n"
+            "<tr><td>Freigabe Analogbetrieb</td><td align='right'>";
 
         if (cv29 & 0x04)
         {
@@ -1772,10 +2453,10 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
             analog_no_selected = "selected";
         }
 
-        HTTP::response += (String) "<select name='analog' style='width:180px'><option value='0' " + analog_no_selected + ">nein</option><option value='4' " + analog_yes_selected + ">ja</option></select>";
-        HTTP::response += (String) "</td></tr>\r\n";
-
-        HTTP::response += (String) "<tr bgcolor='#E0E0E0'><td>Freigabe RailCom</td><td>";
+        HTTP::response += (String)
+            "<select name='analog' style='width:180px'><option value='0' " + analog_no_selected + ">nein</option><option value='4' " + analog_yes_selected + ">ja</option></select>"
+            "</td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Freigabe RailCom</td><td align='right'>";
 
         if (cv29 & 0x08)
         {
@@ -1786,10 +2467,10 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
             railcom_no_selected = "selected";
         }
 
-        HTTP::response += (String) "<select name='railcom' style='width:180px'><option value='0' " + railcom_no_selected + ">nein</option><option value='8' " + railcom_yes_selected + ">ja</option></select>";
-        HTTP::response += (String) "</td></tr>\r\n";
-
-        HTTP::response += (String) "<tr><td>Tabelle Geschwindigkeit</td><td>";
+        HTTP::response += (String)
+            "<select name='railcom' style='width:180px'><option value='0' " + railcom_no_selected + ">nein</option><option value='8' " + railcom_yes_selected + ">ja</option></select>"
+            "</td></tr>\r\n"
+            "<tr><td>Tabelle Geschwindigkeit</td><td align='right'>";
 
         if (cv29 & 0x10)
         {
@@ -1800,10 +2481,10 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
             speedtable_no_selected = "selected";
         }
 
-        HTTP::response += (String) "<select name='speedtable' style='width:180px'><option value='0' " + speedtable_no_selected + ">CV 2/5/6</option><option value='16' " + speedtable_yes_selected + ">CV 67-94</option></select>";
-        HTTP::response += (String) "</td></tr>\r\n";
-
-        HTTP::response += (String) "<tr bgcolor='#E0E0E0'><td>Aktive Adresse</td><td>";
+        HTTP::response += (String)
+            "<select name='speedtable' style='width:180px'><option value='0' " + speedtable_no_selected + ">CV 2/5/6</option><option value='16' " + speedtable_yes_selected + ">CV 67-94</option></select>"
+            "</td></tr>\r\n"
+            "<tr bgcolor='#E0E0E0'><td>Aktive Adresse</td><td align='right'>";
 
         if (cv29 & 0x20)
         {
@@ -1814,9 +2495,10 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
             extaddr_no_selected = "selected";
         }
 
-        HTTP::response += (String) "<select name='extaddr' style='width:180px'><option value='0' " + extaddr_no_selected + ">Basisadresse " + std::to_string(cv1) + "</option>";
-        HTTP::response += (String) "<option value='32' " + extaddr_yes_selected + ">Erweiterte Adresse " + std::to_string(cv17_18) + "</option></select>";
-        HTTP::response += (String) "</td></tr>\r\n";
+        HTTP::response += (String)
+            "<select name='extaddr' style='width:180px'><option value='0' " + extaddr_no_selected + ">Basisadresse " + std::to_string(cv1) + "</option>"
+            "<option value='32' " + extaddr_yes_selected + ">Erweiterte Adresse " + std::to_string(cv17_18) + "</option></select>"
+            "</td></tr>\r\n";
 
         if (cv29 & 0x40)
         {
@@ -1827,7 +2509,7 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
             reserved = 0;
         }
 
-        HTTP::response += (String) "<tr><td>Ansteuerung</td><td>";
+        HTTP::response += (String) "<tr><td>Ansteuerung</td><td align='right'>";
 
         if (cv29 & 0x80)
         {
@@ -1838,22 +2520,25 @@ HTTP_Common::decoder_configuration (uint_fast16_t addr, uint_fast8_t cv29, uint_
             zubehoer_no_selected = "selected";
         }
 
-        HTTP::response += (String) "<select name='zubehoer' style='width:180px'><option value='0' " + zubehoer_no_selected + ">Fahrzeugdecoder</option>";
-        HTTP::response += (String) "<option value='128' " + zubehoer_yes_selected + " disabled>Zubeh&ouml;rdecoder</option></select>";
-        HTTP::response += (String) "</td></tr>\r\n";
+        HTTP::response += (String)
+            "<select name='zubehoer' style='width:180px'><option value='0' " + zubehoer_no_selected + ">Fahrzeugdecoder</option>"
+            "<option value='128' " + zubehoer_yes_selected + " disabled>Zubeh&ouml;rdecoder</option></select>"
+            "</td></tr>\r\n";
     }
 
-    HTTP::response += (String) "<tr><td></td><td align='right'>";
-    HTTP::response += (String) "<input type='hidden' name='reserved' value='" + std::to_string(reserved) + "'>";
+    HTTP::response += (String)
+        "<tr><td></td><td align='right'>"
+        "<input type='hidden' name='reserved' value='" + std::to_string(reserved) + "'>";
 
     if (addr > 0) // pom
     {
         HTTP::response += (String) "<input type='hidden' name='addr' value='" + std::to_string(addr) + "'>";
     }
 
-    HTTP::response += (String) "<input type='hidden' name='action' value='save_cv29'>";
-    HTTP::response += (String) "<input type='submit' value='Speichern'></td></tr>\r\n";
-    HTTP::response += (String) "</table></form>\r\n";
+    HTTP::response += (String)
+        "<input type='hidden' name='action' value='save_cv29'>"
+        "<input type='submit' value='Speichern'></td></tr>\r\n"
+        "</table></form>\r\n";
 }
 
 void

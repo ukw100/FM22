@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * gpio.cc - gpio functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "gpio.h"
+#include "debug.h"
 
 #ifdef __ARMEL__                                                    // Raspberry PI
 
@@ -71,7 +72,7 @@ GPIO::init (void)
     }
     else
     {
-        printf ("bcm2835_init() failed");
+        Debug::printf (DEBUG_LEVEL_NONE, "bcm2835_init() failed\n");
     }
 
     return rtc;

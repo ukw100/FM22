@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * msg.cc - message functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,8 +27,10 @@
 #include "serial.h"
 #include "msg.h"
 #include "debug.h"
+#include "http.h"
 
-#define MSG_ADC                             0x03    // todo: renumber
+#define MSG_ALERT                           0x01
+#define MSG_ADC                             0x03    // todo: renumber: 0x02
 #define MSG_RC1                             0x04
 #define MSG_RC2                             0x05
 #define MSG_POM_CV                          0x06
@@ -57,12 +59,38 @@
 #define MSG_STATE_WAIT_FOR_FRAME_END        2
 
 void
+MSG::alert (uint8_t * bufp, uint_fast8_t len)
+{
+    char    buf[128];
+    char *  p = buf;
+
+    if (len >= 1)
+    {
+        len--;
+        bufp++;
+
+        if (len > 127)
+        {
+            len = 127;
+        }
+
+        while (len-- > 0)
+        {
+            *p++ = *bufp++;
+        }
+
+        *p = '\0';
+        HTTP::set_alert (buf);
+    }
+}
+
+void
 MSG::adc (uint8_t * bufp, uint_fast8_t len)
 {
     if (len == 4)
     {
         bool    b_on = GET8(bufp, 1);
-        DCC::adc_value = GET16(bufp, 2) / 2;
+        DCC::adc_value = GET16(bufp, 2);
 
         if (b_on)
         {
@@ -102,31 +130,37 @@ MSG::rc2 (uint8_t * bufp, uint_fast8_t len)
         uint_fast8_t    nbytes = len - 1;
         uint_fast8_t    bitpos;
         uint_fast8_t    idx;
-        uint_fast16_t   n_locos = Loco::get_n_locos ();
+        uint_fast16_t   n_locos = Locos::get_n_locos ();
+        uint_fast16_t   loco_idx = 0;
 
         for (idx = 0; idx < nbytes; idx++)
         {
             for (bitpos = 0; bitpos < 8; bitpos++)
             {
-                if (bufp[1 + idx] & (1 << bitpos))
+                loco_idx = 8 * idx + bitpos;
+
+                if (loco_idx < n_locos)
                 {
-                    Loco::set_online (8 * idx + bitpos, 1);
+                    if (bufp[1 + idx] & (1 << bitpos))
+                    {
+                        Locos::locos[loco_idx].set_online (1);
+                    }
+                    else
+                    {
+                        Locos::locos[loco_idx].set_online (0);
+                    }
                 }
                 else
                 {
-                    Loco::set_online (8 * idx + bitpos, 0);
+                    break;
                 }
             }
         }
 
-        while (idx < n_locos)
+        while (loco_idx < n_locos)
         {
-            for (bitpos = 0; bitpos < 8; bitpos++)
-            {
-                Loco::set_online (8 * idx + bitpos, 0);
-            }
-
-            idx++;
+            Locos::locos[loco_idx].set_online (0);
+            loco_idx++;
         }
     }
 }
@@ -149,7 +183,7 @@ MSG::rcl (uint8_t * bufp, uint_fast8_t len)
             loco_idx |= *bufp++;
             location = *bufp++;
 
-            Loco::set_rcllocation (loco_idx, location);
+            Locos::locos[loco_idx].set_rcllocation (location);
 
             Debug::printf (DEBUG_LEVEL_VERBOSE, "MSG::rcl: loco=%d location=%d\n", loco_idx, location);
 
@@ -215,7 +249,7 @@ MSG::loco_rc2_rate (uint8_t * bufp, uint_fast8_t len)
         uint_fast16_t   loco_idx = GET16(bufp, 1);
         uint_fast8_t    rc2_rate = GET8(bufp, 3);
 
-        Loco::set_rc2_rate (loco_idx, rc2_rate);
+        Locos::locos[loco_idx].set_rc2_rate (rc2_rate);
     }
 }
 
@@ -264,6 +298,7 @@ MSG::msg (uint8_t * buf, uint_fast8_t len)
 {
     switch (buf[0])
     {
+        case MSG_ALERT:                     MSG::alert (buf, len);                              break;
         case MSG_ADC:                       MSG::adc (buf, len);                                break;
         case MSG_RC1:                       MSG::rc1 (buf, len);                                break;
         case MSG_RC2:                       MSG::rc2 (buf, len);                                break;

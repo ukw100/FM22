@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * dcc.h - DCC encoder
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,11 @@
 #define DCC_SWITCH_STATE_UNDEFINED  0x03    // switch state undefined
 #define DCC_SWITCH_STATE_MASK       0x03    // mask: 2 bits
 
+#define DCC_SIGNAL_STATE_HALT       0x00    // signal: halt
+#define DCC_SIGNAL_STATE_GO         0x01    // signal: straight
+#define DCC_SIGNAL_STATE_UNDEFINED  0x03    // switch state undefined
+#define DCC_SIGNAL_STATE_MASK       0x03    // mask: 2 bits
+
 typedef struct
 {
     uint16_t    addr;
@@ -83,14 +88,6 @@ class DCC
         static uint_fast8_t     booster_is_on;
         static unsigned long    booster_is_on_time;
 
-        static uint16_t         pgm_limit;
-        static uint16_t         pgm_min_lower_value;
-        static uint16_t         pgm_max_lower_value;
-        static uint16_t         pgm_min_upper_value;
-        static uint16_t         pgm_max_upper_value;
-        static uint16_t         pgm_min_cnt;
-        static uint16_t         pgm_max_cnt;
-
         static void             booster_off (void);
         static void             booster_on (void);
         static uint_fast8_t     get_mode (void);
@@ -116,6 +113,8 @@ class DCC
         static void             get_ack (uint_fast16_t addr);
         static void             base_switch_set (uint_fast16_t addr, uint_fast8_t nswitch);
         static void             base_switch_reset (uint_fast16_t addr, uint_fast8_t nswitch);
+        static void             ext_accessory_set (uint_fast16_t addr, uint_fast8_t value);
+        static void             set_shortcut_value (uint_fast16_t shortcut_value);
         static void             set_s88_n_contacts (uint_fast16_t n_s88_contacts);
         static void             init (void);
 

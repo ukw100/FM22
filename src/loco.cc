@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
  * loco.cc - loco management functions
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +18,11 @@
  *------------------------------------------------------------------------------------------------------------------------
  */
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string>
+
+#include <cstdint>
+#include <cstring>
 #include "func.h"
 #include "dcc.h"
 #include "millis.h"
@@ -35,46 +36,43 @@
 
 #define MAX_PACKET_SEQUENCES    10
 
-bool                    Loco::data_changed = false;
-LOCO                    Loco::locos[MAX_LOCOS];                                     // loco
-uint_fast16_t           Loco::n_locos = 0;                                          // number of locos
+bool                    Locos::data_changed = false;                                // flag: data changed, public
+std::vector<Loco>       Locos::locos;                                               // locos array, public
+uint_fast16_t           Locos::n_locos = 0;                                         // number of locos, private
 
 /*------------------------------------------------------------------------------------------------------------------------
  * sendspeed() - send speed
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::sendspeed (uint_fast16_t loco_idx)
+Loco::sendspeed ()
 {
-    if (loco_idx < Loco::n_locos)
+    uint16_t        addr            = this->addr;
+    uint_fast8_t    speed_steps     = this->speed_steps;
+    uint_fast8_t    fwd             = this->fwd;
+    uint_fast8_t    speed           = this->speed;
+
+    // TODO: speed_steps == 14
+    if (speed_steps == 28)
     {
-        uint16_t        addr            = Loco::locos[loco_idx].addr;
-        uint_fast8_t    speed_steps     = Loco::locos[loco_idx].speed_steps;
-        uint_fast8_t    fwd             = Loco::locos[loco_idx].fwd;
-        uint_fast8_t    speed           = Loco::locos[loco_idx].speed;
+        speed /= 4;
 
-        // TODO: speed_steps == 14
-        if (speed_steps == 28)
+        if (speed == 1 || speed == 2)
         {
-            speed /= 4;
-
-            if (speed == 1 || speed == 2)
-            {
-                speed = 3;
-            }
-            else if (speed > 31)
-            {
-                speed = 31;
-            }
-
-            DCC::loco_28 (loco_idx, addr, fwd, speed);
-            Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::sendspeed: loco_idx=%d send speed_28: %d\n", loco_idx, speed);
+            speed = 3;
         }
-        else // if (speed_steps == 128)
+        else if (speed > 31)
         {
-            DCC::loco (loco_idx, addr, fwd, speed, 0, 0);
-            Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::sendspeed: loco_idx=%d send speed_126: %d\n", loco_idx, speed);
+            speed = 31;
         }
+
+        DCC::loco_28 (this->id, addr, fwd, speed);
+        Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::sendspeed: loco_idx=%d send speed_28: %d\n", this->id, speed);
+    }
+    else // if (speed_steps == 128)
+    {
+        DCC::loco (this->id, addr, fwd, speed, 0, 0);
+        Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::sendspeed: loco_idx=%d send speed_128: %d\n", this->id, speed);
     }
 }
 
@@ -83,20 +81,17 @@ Loco::sendspeed (uint_fast16_t loco_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::sendfunction (uint_fast16_t loco_idx, uint_fast8_t range)
+Loco::sendfunction (uint_fast8_t range)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        uint16_t    addr            = Loco::locos[loco_idx].addr;
-        uint32_t    functions       = Loco::locos[loco_idx].functions;
+    uint16_t    addr            = this->addr;
+    uint32_t    functions       = this->functions;
 
-        DCC::loco_function (loco_idx, addr, functions, range);
-        Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::sendfunction: loco_idx=%d range %d\n", loco_idx, range);
-    }
+    DCC::loco_function (this->id, addr, functions, range);
+    Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::sendfunction: loco_idx=%d range %d\n", this->id, range);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  sendcmd (idx, packet_no) - send loco command
+ * sendcmd () - send loco command
  *
  *  Packet sequences:
  *      0       send speed
@@ -112,124 +107,149 @@ Loco::sendfunction (uint_fast16_t loco_idx, uint_fast8_t range)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::sendcmd (uint_fast16_t loco_idx, uint_fast8_t packet_no)
+Loco::sendcmd (uint_fast8_t packet_no)
 {
-    if (loco_idx < Loco::n_locos)
+    uint32_t        target_next_millis  = this->target_next_millis;
+
+    if (target_next_millis > 0 && Millis::elapsed() >= target_next_millis)
     {
-        uint32_t        target_next_millis  = Loco::locos[loco_idx].target_next_millis;
+        uint32_t    millis = Millis::elapsed();
 
-        if (target_next_millis > 0 && Millis::elapsed() >= target_next_millis)
+        uint_fast8_t    speed           = this->speed;
+        uint_fast8_t    tspeed          = this->target_speed;
+
+        if (tspeed == speed)
         {
-            uint32_t    millis = Millis::elapsed();
-
-            uint_fast8_t    speed           = Loco::locos[loco_idx].speed;
-            uint_fast8_t    tspeed          = Loco::locos[loco_idx].target_speed;
-
-            if (tspeed == speed)
+            this->target_next_millis = 0;
+        }
+        else
+        {
+            if (tspeed > speed)
             {
-                Loco::locos[loco_idx].target_next_millis = 0;
-            }
-            else
-            {
-                if (tspeed > speed)
+                while (this->target_next_millis < millis)
                 {
-                    while (Loco::locos[loco_idx].target_next_millis < millis)
-                    {
-                        Loco::locos[loco_idx].target_next_millis += Loco::locos[loco_idx].target_millis_step;
+                    this->target_next_millis += this->target_millis_step;
 
+                    speed++;
+
+                    if (speed == tspeed)
+                    {
+                        break;
+                    }
+
+                    if (speed == 1)
+                    {
                         speed++;
 
                         if (speed == tspeed)
                         {
                             break;
                         }
+                    }
+                }
 
-                        if (speed == 1)
-                        {
-                            speed++;
+                this->speed = speed;
+            }
+            else
+            {
+                while (this->target_next_millis < millis)
+                {
+                    this->target_next_millis += this->target_millis_step;
 
-                            if (speed == tspeed)
-                            {
-                                break;
-                            }
-                        }
+                    speed--;
+
+                    if (speed == tspeed)
+                    {
+                        break;
                     }
 
-                    Loco::locos[loco_idx].speed = speed;
-                }
-                else
-                {
-                    while (Loco::locos[loco_idx].target_next_millis < millis)
+                    if (speed == 1)
                     {
-                        Loco::locos[loco_idx].target_next_millis += Loco::locos[loco_idx].target_millis_step;
-
                         speed--;
 
                         if (speed == tspeed)
                         {
                             break;
                         }
-
-                        if (speed == 1)
-                        {
-                            speed--;
-
-                            if (speed == tspeed)
-                            {
-                                break;
-                            }
-                        }
-
                     }
 
-                    Loco::locos[loco_idx].speed = speed;
                 }
+
+                this->speed = speed;
             }
         }
+    }
 
+#if 0
+
+#define LOCO_SLEEP_CNT_MAX      256
+
+    if (this->target_next_millis == 0 && this->speed == 0)
+    {
+        if (this->packet_sequence_idx == 0)
+        {
+            if (this->sleep_cnt < LOCO_SLEEP_CNT_MAX)
+            {
+                this->sleep_cnt++;
+            }
+            else
+            {
+                this->sleep_cnt = 0;
+            }
+        }
+    }
+    else
+    {
+        this->sleep_cnt = 0;
+    }
+
+#endif
+
+    if (this->sleep_cnt < 4 || (this->sleep_cnt % 4) == 0)
+    {
         if (packet_no & 0x01)           // odd packet number: send functions
         {
             switch (packet_no)
             {
                 case 1:
                 {
-                    Loco::sendfunction (loco_idx, DCC_F00_F04_RANGE);
-                    Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F00_F04_RANGE)\n", loco_idx);
+                    this->sendfunction (DCC_F00_F04_RANGE);
+                    Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F00_F04_RANGE)\n", this->id);
                     break;
                 }
                 case 3:
                 {
-                    if (Loco::locos[loco_idx].locofunction.max >= 5)
+                    if (this->locofunction.max >= 5)
                     {
-                        Loco::sendfunction (loco_idx, DCC_F05_F08_RANGE);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F05_F08_RANGE)\n", loco_idx);
+                        this->sendfunction (DCC_F05_F08_RANGE);
+                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F05_F08_RANGE)\n", this->id);
                     }
                     break;
                 }
                 case 5:
                 {
-                    if (Loco::locos[loco_idx].locofunction.max >= 9)
+                    if (this->locofunction.max >= 9)
                     {
-                        Loco::sendfunction (loco_idx, DCC_F09_F12_RANGE);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F09_F12_RANGE)\n", loco_idx);
+                        this->sendfunction (DCC_F09_F12_RANGE);
+                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F09_F12_RANGE)\n", this->id);
                     }
                     break;
                 }
                 case 7:
                 {
-                    if (Loco::locos[loco_idx].locofunction.max >= 13)
+                    if (this->locofunction.max >= 13)
                     {
-                        Loco::sendfunction (loco_idx, DCC_F13_F20_RANGE);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F13_F20_RANGE)\n", loco_idx);
+                        this->sendfunction (DCC_F13_F20_RANGE);
+                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F13_F20_RANGE)\n", this->id);
                     }
                     break;
                 }
                 case 9:
                 {
-                    if (Loco::locos[loco_idx].locofunction.max >= 21)
+                    if (this->locofunction.max >= 21)
                     {
-                        Loco::sendfunction (loco_idx, DCC_F21_F28_RANGE);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F21_F28_RANGE)\n", loco_idx);
+                        this->sendfunction (DCC_F21_F28_RANGE);
+                        Debug::printf (DEBUG_LEVEL_VERBOSE, "sendfunction (%d, DCC_F21_F28_RANGE)\n", this->id);
                     }
                     break;
                 }
@@ -237,291 +257,154 @@ Loco::sendcmd (uint_fast16_t loco_idx, uint_fast8_t packet_no)
         }
         else                        // even packet number: send speed
         {
-            Loco::sendspeed (loco_idx);
+            this->sendspeed ();
         }
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  add () - add a loco
+ *  Loco () - constructor
  *------------------------------------------------------------------------------------------------------------------------
  */
-uint_fast16_t
-Loco::add (void)
+Loco::Loco ()
 {
-    uint_fast16_t loco_idx = Loco::n_locos;
+    uint_fast8_t    fidx;
+    uint_fast8_t    midx;
 
-    if (loco_idx < MAX_LOCOS)
+    this->name                      = "";
+    this->addr                      = 0;
+    this->addon_idx                 = 0xFFFF;
+    this->target_next_millis        = 0;
+    this->speed_steps               = 0;
+    this->fwd                       = 1;
+    this->speed                     = 0;
+    this->target_speed              = 0;
+    this->target_millis_step        = 0;
+    this->target_next_millis        = 0;
+    this->functions                 = 0;
+    this->packet_sequence_idx       = 0;
+    this->locofunction.pulse_mask   = 0;
+    this->locofunction.sound_mask   = 0;
+    this->locofunction.max          = 0;
+    this->rc_millis                 = 0;
+    this->rc2_rate                  = 0;
+    this->offline_cnt               = 0;
+    this->rcl_location              = 0xFF;
+    this->rr_location               = 0xFFFF;
+    this->sleep_cnt                 = 0;
+    this->destination               = 0xFF;
+    this->flags                     = 0;
+    this->active                    = 0;
+
+    for (fidx = 0; fidx < MAX_LOCO_FUNCTIONS; fidx++)
     {
-        uint_fast8_t    fidx;
+        this->locofunction.name_idx[fidx] = 0xFFFF;
+    }
 
-        Loco::locos[loco_idx].speed                 = 0;
-        Loco::locos[loco_idx].target_next_millis    = 0;
-        Loco::locos[loco_idx].fwd                   = 1;
-        Loco::locos[loco_idx].functions             = 0;
-        Loco::locos[loco_idx].locofunction.max      = 0;
-        Loco::locos[loco_idx].rcl_location          = 0xFF;
-        Loco::locos[loco_idx].rr_location           = 0xFFFF;
-        Loco::locos[loco_idx].addon_idx             = 0xFFFF;
+    for (fidx = 0; fidx < MAX_LOCO_FUNCTIONS; fidx++)
+    {
+        this->coupled_functions[fidx] = 0xFF;
+    }
+
+    for (midx = 0; midx < MAX_LOCO_MACROS_PER_LOCO; midx++)
+    {
+        this->macros[midx].n_actions = 0;
+    }
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * set_id () - set id
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Loco::set_id (uint_fast16_t id)
+{
+    this->id = id;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * set_addon () - set add-on index
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Loco::set_addon (uint_fast16_t addon_idx)
+{
+    uint_fast16_t   n_locos;
+    uint_fast16_t   lidx;
+    uint_fast8_t    fidx;
+
+    n_locos = Locos::get_n_locos();
+
+    for (lidx = 0; lidx < n_locos; lidx++)                            // first remove addon from other locos
+    {
+        if (Locos::locos[lidx].get_addon() == addon_idx)
+        {
+            if (lidx != this->id)
+            {
+                Locos::locos[lidx].reset_addon();
+
+                for (fidx = 0; fidx < MAX_LOCO_FUNCTIONS; fidx++)
+                {
+                    Locos::locos[lidx].coupled_functions[fidx] = 0xFF;
+                }
+
+                Locos::data_changed = true;
+            }
+        }
+    }
+
+    if (this->addon_idx != addon_idx)
+    {
+        this->addon_idx = addon_idx;
 
         for (fidx = 0; fidx < MAX_LOCO_FUNCTIONS; fidx++)
         {
-            Loco::locos[loco_idx].locofunction.name_idx[fidx] = 0xFFFF;
+            this->coupled_functions[fidx] = 0xFF;
         }
 
-        Loco::n_locos++;
-        Loco::data_changed = true;
+        Locos::data_changed = true;
     }
-    else
-    {
-        loco_idx = 0xFFFF;
-    }
-
-    return loco_idx;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  setid () - set new id
+ * get_addon () - get add-on index
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast16_t
-Loco::setid (uint_fast16_t loco_idx, uint_fast16_t new_loco_idx)
-{
-    uint_fast16_t   rtc = 0xFFFF;
-
-    if (loco_idx < Loco::n_locos && new_loco_idx < Loco::n_locos)
-    {
-        if (loco_idx != new_loco_idx)
-        {
-            LOCO            tmploco;
-            uint_fast16_t   lidx;
-
-            uint16_t *      map_new_loco_idx = (uint16_t *) calloc (Loco::n_locos, sizeof (uint16_t));
-
-            for (lidx = 0; lidx < Loco::n_locos; lidx++)
-            {
-                map_new_loco_idx[lidx] = lidx;
-            }
-
-            memcpy (&tmploco, Loco::locos + loco_idx, sizeof (LOCO));
-
-            if (new_loco_idx < loco_idx)
-            {
-                // step 1: shift loco
-                for (lidx = loco_idx; lidx > new_loco_idx; lidx--)
-                {
-                    memcpy (Loco::locos + lidx, Loco::locos + lidx - 1, sizeof (LOCO));
-                    map_new_loco_idx[lidx - 1] = lidx;
-                }
-            }
-            else // if (new_loco_idx > loco_idx)
-            {
-                // step 1: shift loco
-                for (lidx = loco_idx; lidx < new_loco_idx; lidx++)
-                {
-                    memcpy (Loco::locos + lidx, Loco::locos + lidx + 1, sizeof (LOCO));
-                    map_new_loco_idx[lidx + 1] = lidx;
-                }
-            }
-
-            memcpy (Loco::locos + lidx, &tmploco, sizeof (LOCO));
-            map_new_loco_idx[loco_idx] = lidx;
-
-            for (lidx = 0; lidx < Loco::n_locos; lidx++)
-            {
-                Debug::printf (DEBUG_LEVEL_NORMAL, "%2d -> %2d\n", lidx, map_new_loco_idx[lidx]);
-            }
-
-            // step 2: correct loco_idx in ADDON, RAILROAD, RCL, S88
-            AddOn::set_new_loco_ids (map_new_loco_idx, Loco::n_locos);
-            Railroad::set_new_loco_ids (map_new_loco_idx, Loco::n_locos);
-            RCL::set_new_loco_ids (map_new_loco_idx, Loco::n_locos);
-            S88::set_new_loco_ids (map_new_loco_idx, Loco::n_locos);
-
-            free (map_new_loco_idx);
-            Loco::data_changed = true;
-            rtc = new_loco_idx;
-        }
-        else
-        {
-            rtc = loco_idx;
-        }
-    }
-
-    return rtc;
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  Loco::set_new_addon_ids ()
- *------------------------------------------------------------------------------------------------------------------------
- */
-void
-Loco::set_new_addon_ids (uint16_t * map_new_addon_idx, uint16_t n_addons)
-{
-    uint_fast8_t     loco_idx;
-
-    for (loco_idx = 0; loco_idx < Loco::n_locos; loco_idx++)
-    {
-        if (Loco::locos[loco_idx].addon_idx < n_addons)
-        {
-            Loco::locos[loco_idx].addon_idx = map_new_addon_idx[Loco::locos[loco_idx].addon_idx];
-        }
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  get_n_locos () - get number of locos
- *------------------------------------------------------------------------------------------------------------------------
- */
-uint_fast16_t
-Loco::get_n_locos (void)
-{
-    return Loco::n_locos;
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  unlock (idx) - unlock a loco entry
- *------------------------------------------------------------------------------------------------------------------------
- */
-void
-Loco::unlock (uint_fast16_t loco_idx)
-{
-    if (loco_idx < Loco::n_locos)
-    {
-        if (Loco::locos[loco_idx].flags & LOCO_FLAG_LOCKED)
-        {
-            Loco::locos[loco_idx].flags &= ~LOCO_FLAG_LOCKED;
-        }
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  lock (idx) - lock a loco entry
- *------------------------------------------------------------------------------------------------------------------------
- */
-void
-Loco::lock (uint_fast16_t loco_idx)
-{
-    if (loco_idx < Loco::n_locos)
-    {
-        if (! (Loco::locos[loco_idx].flags & LOCO_FLAG_LOCKED))
-        {
-            Loco::locos[loco_idx].flags |= LOCO_FLAG_LOCKED;
-        }
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  islocked (idx) - check if loco is locked
- *------------------------------------------------------------------------------------------------------------------------
- */
-uint_fast8_t
-Loco::islocked(uint_fast16_t loco_idx)
-{
-    if (loco_idx < Loco::n_locos && (Loco::locos[loco_idx].flags & LOCO_FLAG_LOCKED))
-    {
-        return true;
-    }
-    return false;
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  set_addon (idx) - set add-on index
- *------------------------------------------------------------------------------------------------------------------------
- */
-void
-Loco::set_addon (uint_fast16_t loco_idx, uint_fast16_t addon_idx)
-{
-    if (loco_idx < Loco::n_locos && addon_idx < Loco::n_locos)
-    {
-        uint_fast16_t   lidx;
-        uint_fast8_t    fidx;
-
-        for (lidx = 0; lidx < Loco::n_locos; lidx++)                            // first remove addon from other locos
-        {
-            if (Loco::locos[lidx].addon_idx == addon_idx)
-            {
-                if (lidx != loco_idx)
-                {
-                    Loco::locos[lidx].addon_idx = 0xFFFF;
-
-                    for (fidx = 0; fidx < MAX_LOCO_FUNCTIONS; fidx++)
-                    {
-                        Loco::locos[lidx].coupled_functions[fidx] = 0xFF;
-                    }
-
-                    Loco::data_changed = true;
-                }
-            }
-        }
-
-        if (Loco::locos[loco_idx].addon_idx != addon_idx)
-        {
-            Loco::locos[loco_idx].addon_idx = addon_idx;
-
-            for (fidx = 0; fidx < MAX_LOCO_FUNCTIONS; fidx++)
-            {
-                Loco::locos[loco_idx].coupled_functions[fidx] = 0xFF;
-            }
-
-            Loco::data_changed = true;
-        }
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  reset_addon (idx) - delete add-on index
- *------------------------------------------------------------------------------------------------------------------------
- */
-void
-Loco::reset_addon (uint_fast16_t loco_idx)
-{
-    if (loco_idx < Loco::n_locos)
-    {
-        if (Loco::locos[loco_idx].addon_idx != 0xFFFF)
-        {
-            Loco::locos[loco_idx].addon_idx = 0xFFFF;
-            Loco::data_changed = true;
-        }
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  get_addon (idx) - get add-on index
- *------------------------------------------------------------------------------------------------------------------------
- */
-uint_fast16_t
-Loco::get_addon (uint_fast16_t loco_idx)
+Loco::get_addon ()
 {
     uint_fast16_t   rtc;
-
-    if (loco_idx < Loco::n_locos)
-    {
-        rtc = Loco::locos[loco_idx].addon_idx;
-    }
-    else
-    {
-        rtc = 0xFFFF;
-    }
+    rtc = this->addon_idx;
     return rtc;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_coupled_function () - set coupled function
+ * reset_addon (idx) - delete add-on index
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_coupled_function (uint_fast16_t loco_idx, uint_fast8_t lfidx, uint_fast8_t afidx)
+Loco::reset_addon ()
 {
-    if (loco_idx < Loco::n_locos)
+    if (this->addon_idx != 0xFFFF)
     {
-        uint_fast16_t addon_idx = Loco::locos[loco_idx].addon_idx;
+        this->addon_idx = 0xFFFF;
+        Locos::data_changed = true;
+    }
+}
 
-        if (addon_idx != 0xFFFF)
-        {
-            Loco::locos[loco_idx].coupled_functions[lfidx] = afidx;
-            Loco::data_changed = true;
-        }
+/*------------------------------------------------------------------------------------------------------------------------
+ * set_coupled_function () - set coupled function
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Loco::set_coupled_function (uint_fast8_t lfidx, uint_fast8_t afidx)
+{
+    uint_fast16_t addon_idx = this->addon_idx;
+
+    if (addon_idx != 0xFFFF)
+    {
+        this->coupled_functions[lfidx] = afidx;
+        Locos::data_changed = true;
     }
 }
 
@@ -530,201 +413,141 @@ Loco::set_coupled_function (uint_fast16_t loco_idx, uint_fast8_t lfidx, uint_fas
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::get_coupled_function (uint_fast16_t loco_idx, uint_fast8_t lfidx)
+Loco::get_coupled_function (uint_fast8_t lfidx)
 {
     uint_fast8_t    afidx = 0xFF;
 
-    if (loco_idx < Loco::n_locos)
-    {
-        uint_fast16_t addon_idx = Loco::locos[loco_idx].addon_idx;
+    uint_fast16_t addon_idx = this->addon_idx;
 
-        if (addon_idx != 0xFFFF)
-        {
-            afidx = Loco::locos[loco_idx].coupled_functions[lfidx];
-        }
+    if (addon_idx != 0xFFFF)
+    {
+        afidx = this->coupled_functions[lfidx];
     }
 
     return afidx;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_name (idx) - set name
+ * set_name () - set name
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_name (uint_fast16_t loco_idx, const char * name)
+Loco::set_name (std::string name)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        int l = strlen (name);
-
-        if (! Loco::locos[loco_idx].name || strcmp (Loco::locos[loco_idx].name, name) != 0)
-        {
-            if (Loco::locos[loco_idx].name)
-            {
-                if ((int) strlen (Loco::locos[loco_idx].name) < l)
-                {
-                    free (Loco::locos[loco_idx].name);
-                    Loco::locos[loco_idx].name = (char *) NULL;
-                }
-            }
-
-            if (! Loco::locos[loco_idx].name)
-            {
-                Loco::locos[loco_idx].name = (char *) malloc (l + 1);
-            }
-
-            strcpy (Loco::locos[loco_idx].name, name);
-            Loco::data_changed = true;
-        }
-    }
+    this->name = name;
+    Locos::data_changed = true;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_name (idx) - get name
+ * get_name () - get name
  *------------------------------------------------------------------------------------------------------------------------
  */
-char *
-Loco::get_name (uint_fast16_t loco_idx)
+std::string
+Loco::get_name ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return Loco::locos[loco_idx].name;
-    }
-    return (char *) NULL;
+    return this->name;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_addr (idx, address) - set address
+ * set_addr () - set address
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_addr (uint_fast16_t loco_idx, uint_fast16_t addr)
+Loco::set_addr (uint_fast16_t addr)
 {
-    if (loco_idx < Loco::n_locos)
+    if (this->addr != addr)
     {
-        if (Loco::locos[loco_idx].addr != addr)
-        {
-            Loco::locos[loco_idx].addr = addr;
-            Loco::data_changed = true;
-        }
+        this->addr = addr;
+        Locos::data_changed = true;
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_addr (idx) - get address
+ * get_addr () - get address
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast16_t
-Loco::get_addr (uint_fast16_t loco_idx)
+Loco::get_addr ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return (Loco::locos[loco_idx].addr);
-    }
-
-    return 0;
+    return (this->addr);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_speed_steps (idx, speed_steps) - set speed steps, only 14, 28 and 128 allowed
+ * set_speed_steps () - set speed steps, only 14, 28 and 128 allowed
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_speed_steps (uint_fast16_t loco_idx, uint_fast8_t speed_steps)
+Loco::set_speed_steps (uint_fast8_t speed_steps)
 {
-    if (loco_idx < Loco::n_locos)
+    if (this->speed_steps != speed_steps)
     {
-        if (Loco::locos[loco_idx].speed_steps != speed_steps)
-        {
-            Loco::locos[loco_idx].speed_steps = speed_steps;
-            Loco::data_changed = true;
-        }
+        this->speed_steps = speed_steps;
+        Locos::data_changed = true;
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_speed_steps (idx) - get speed steps
+ * get_speed_steps () - get speed steps
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::get_speed_steps (uint_fast16_t loco_idx)
+Loco::get_speed_steps ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return (Loco::locos[loco_idx].speed_steps);
-    }
-    return 0;
+    return (this->speed_steps);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_flags (idx) - set flags
+ * set_flags () - set flags
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_flags (uint_fast16_t loco_idx, uint32_t flags)
+Loco::set_flags (uint32_t flags)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        Loco::locos[loco_idx].flags = flags;
-    }
+    this->flags = flags;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_flags (idx) - get flags
+ * get_flags () - get flags
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint32_t
-Loco::get_flags (uint_fast16_t loco_idx)
+Loco::get_flags ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return Loco::locos[loco_idx].flags;
-    }
-    return 0;
+    return this->flags;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_flag_halt (idx) - set flag HALT
+ * set_flag_halt () - set flag HALT
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_flag_halt (uint_fast16_t loco_idx)
+Loco::set_flag_halt ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        Loco::locos[loco_idx].flags |= LOCO_FLAG_HALT;
-    }
+    this->flags |= LOCO_FLAG_HALT;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  reset_flag_halt (idx) - reset flag HALT
+ * reset_flag_halt () - reset flag HALT
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::reset_flag_halt (uint_fast16_t loco_idx)
+Loco::reset_flag_halt ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        Loco::locos[loco_idx].flags &= ~LOCO_FLAG_HALT;
-    }
+    this->flags &= ~LOCO_FLAG_HALT;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_flag_halt (idx) - get flag HALT
+ * get_flag_halt () - get flag HALT
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-Loco::get_flag_halt (uint_fast16_t loco_idx)
+Loco::get_flag_halt ()
 {
     bool rtc = false;
 
-    if (loco_idx < Loco::n_locos)
+    if (this->flags & LOCO_FLAG_HALT)
     {
-        if (Loco::locos[loco_idx].flags & LOCO_FLAG_HALT)
-        {
-            rtc = true;
-        }
+        rtc = true;
     }
 
     return rtc;
@@ -735,17 +558,17 @@ Loco::get_flag_halt (uint_fast16_t loco_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::add_macro_action (uint_fast16_t loco_idx, uint_fast8_t macroidx)
+Loco::add_macro_action (uint_fast8_t macroidx)
 {
     uint_fast8_t actionidx;
 
-    if (loco_idx < Loco::n_locos && Loco::locos[loco_idx].macros[macroidx].n_actions < LOCO_MAX_ACTIONS_PER_MACRO - 1)
+    if (this->macros[macroidx].n_actions < LOCO_MAX_ACTIONS_PER_MACRO)
     {
-        actionidx = Loco::locos[loco_idx].macros[macroidx].n_actions;
-        Loco::locos[loco_idx].macros[macroidx].actions[actionidx].action        = LOCO_ACTION_NONE;
-        Loco::locos[loco_idx].macros[macroidx].actions[actionidx].n_parameters  = 0;
-        Loco::locos[loco_idx].macros[macroidx].n_actions++;
-        Loco::data_changed = true;
+        actionidx = this->macros[macroidx].n_actions;
+        this->macros[macroidx].actions[actionidx].action        = LOCO_ACTION_NONE;
+        this->macros[macroidx].actions[actionidx].n_parameters  = 0;
+        this->macros[macroidx].n_actions++;
+        Locos::data_changed = true;
     }
     else
     {
@@ -760,30 +583,30 @@ Loco::add_macro_action (uint_fast16_t loco_idx, uint_fast8_t macroidx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::delete_macro_action (uint_fast16_t loco_idx, uint_fast8_t macroidx, uint_fast8_t actionidx)
+Loco::delete_macro_action (uint_fast8_t macroidx, uint_fast8_t actionidx)
 {
     uint_fast8_t    n_parameters;
     uint_fast8_t    pidx;
 
-    if (actionidx < Loco::locos[loco_idx].macros[macroidx].n_actions)
+    if (actionidx < this->macros[macroidx].n_actions)
     {
-        while (actionidx < Loco::locos[loco_idx].macros[macroidx].n_actions - 1)
+        while (actionidx < this->macros[macroidx].n_actions - 1)
         {
-            n_parameters = Loco::locos[loco_idx].macros[macroidx].actions[actionidx + 1].n_parameters;
+            n_parameters = this->macros[macroidx].actions[actionidx + 1].n_parameters;
 
-            Loco::locos[loco_idx].macros[macroidx].actions[actionidx].action        = Loco::locos[loco_idx].macros[macroidx].actions[actionidx + 1].action;
-            Loco::locos[loco_idx].macros[macroidx].actions[actionidx].n_parameters  = n_parameters;
+            this->macros[macroidx].actions[actionidx].action        = this->macros[macroidx].actions[actionidx + 1].action;
+            this->macros[macroidx].actions[actionidx].n_parameters  = n_parameters;
 
             for (pidx = 0; pidx < n_parameters; pidx++)
             {
-                Loco::locos[loco_idx].macros[macroidx].actions[actionidx].parameters[pidx]  = Loco::locos[loco_idx].macros[macroidx].actions[actionidx + 1].parameters[pidx];
+                this->macros[macroidx].actions[actionidx].parameters[pidx]  = this->macros[macroidx].actions[actionidx + 1].parameters[pidx];
             }
 
             actionidx++;
         }
 
-        Loco::locos[loco_idx].macros[macroidx].n_actions--;
-        Loco::data_changed = true;
+        this->macros[macroidx].n_actions--;
+        Locos::data_changed = true;
     }
 }
 
@@ -792,10 +615,10 @@ Loco::delete_macro_action (uint_fast16_t loco_idx, uint_fast8_t macroidx, uint_f
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::get_n_macro_actions (uint_fast16_t loco_idx, uint_fast8_t macroidx)
+Loco::get_n_macro_actions (uint_fast8_t macroidx)
 {
     uint_fast8_t    rtc;
-    rtc = Loco::locos[loco_idx].macros[macroidx].n_actions;
+    rtc = this->macros[macroidx].n_actions;
     return rtc;
 }
 
@@ -804,23 +627,23 @@ Loco::get_n_macro_actions (uint_fast16_t loco_idx, uint_fast8_t macroidx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-Loco::set_macro_action (uint_fast16_t loco_idx, uint_fast8_t macroidx, uint_fast8_t actionidx, LOCOACTION * lap)
+Loco::set_macro_action (uint_fast8_t macroidx, uint_fast8_t actionidx, LOCOACTION * lap)
 {
     uint_fast8_t rtc = false;
 
-    if (actionidx < Loco::locos[loco_idx].macros[macroidx].n_actions)
+    if (actionidx < this->macros[macroidx].n_actions)
     {
         uint_fast8_t pidx;
 
-        Loco::locos[loco_idx].macros[macroidx].actions[actionidx].action        = lap->action;
-        Loco::locos[loco_idx].macros[macroidx].actions[actionidx].n_parameters  = lap->n_parameters;
+        this->macros[macroidx].actions[actionidx].action        = lap->action;
+        this->macros[macroidx].actions[actionidx].n_parameters  = lap->n_parameters;
 
         for (pidx = 0; pidx < lap->n_parameters; pidx++)
         {
-            Loco::locos[loco_idx].macros[macroidx].actions[actionidx].parameters[pidx] = lap->parameters[pidx];
+            this->macros[macroidx].actions[actionidx].parameters[pidx] = lap->parameters[pidx];
         }
 
-        Loco::data_changed = true;
+        Locos::data_changed = true;
         rtc = true;
     }
 
@@ -832,20 +655,20 @@ Loco::set_macro_action (uint_fast16_t loco_idx, uint_fast8_t macroidx, uint_fast
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-Loco::get_macro_action (uint_fast16_t loco_idx, uint_fast8_t macroidx, uint_fast8_t actionidx, LOCOACTION * lap)
+Loco::get_macro_action (uint_fast8_t macroidx, uint_fast8_t actionidx, LOCOACTION * lap)
 {
     uint_fast8_t rtc = false;
 
-    if (actionidx < Loco::locos[loco_idx].macros[macroidx].n_actions)
+    if (actionidx < this->macros[macroidx].n_actions)
     {
         uint_fast8_t pidx;
 
-        lap->action         = Loco::locos[loco_idx].macros[macroidx].actions[actionidx].action;
-        lap->n_parameters   = Loco::locos[loco_idx].macros[macroidx].actions[actionidx].n_parameters;
+        lap->action         = this->macros[macroidx].actions[actionidx].action;
+        lap->n_parameters   = this->macros[macroidx].actions[actionidx].n_parameters;
 
         for (pidx = 0; pidx < lap->n_parameters; pidx++)
         {
-            lap->parameters[pidx] = Loco::locos[loco_idx].macros[macroidx].actions[actionidx].parameters[pidx];
+            lap->parameters[pidx] = this->macros[macroidx].actions[actionidx].parameters[pidx];
         }
         rtc = true;
     }
@@ -858,14 +681,14 @@ Loco::get_macro_action (uint_fast16_t loco_idx, uint_fast8_t macroidx, uint_fast
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
+Loco::execute_macro (uint_fast8_t macroidx)
 {
     LOCOACTION *    lap;
     uint_fast8_t    n_actions;
     uint_fast8_t    actionidx;
 
-    n_actions = Loco::locos[loco_idx].macros[macroidx].n_actions;
-    lap = Loco::locos[loco_idx].macros[macroidx].actions;
+    n_actions = this->macros[macroidx].n_actions;
+    lap = this->macros[macroidx].actions;
 
     for (actionidx = 0; actionidx < n_actions; actionidx++)
     {
@@ -879,11 +702,11 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
 
                 if (start == 0)
                 {
-                    Loco::set_speed (loco_idx, speed, tenths);
+                    this->set_speed (speed, tenths);
                 }
                 else
                 {
-                    Event::add_event_loco_speed (start, loco_idx, EVENT_SET_LOCO_SPEED, speed, tenths);
+                    Event::add_event_loco_speed (start, this->id, EVENT_SET_LOCO_SPEED, speed, tenths);
                 }
                 break;
             }
@@ -896,16 +719,16 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
 
                 if (start == 0)
                 {
-                    uint_fast8_t current_speed = Loco::get_speed (loco_idx);
+                    uint_fast8_t current_speed = this->get_speed ();
 
                     if (current_speed < speed)
                     {
-                        Loco::set_speed (loco_idx, speed, tenths);
+                        this->set_speed (speed, tenths);
                     }
                 }
                 else
                 {
-                    Event::add_event_loco_speed (start, loco_idx, EVENT_SET_LOCO_MIN_SPEED, speed, tenths);
+                    Event::add_event_loco_speed (start, this->id, EVENT_SET_LOCO_MIN_SPEED, speed, tenths);
                 }
                 break;
             }
@@ -918,16 +741,16 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
 
                 if (start == 0)
                 {
-                    uint_fast8_t current_speed = Loco::get_speed (loco_idx);
+                    uint_fast8_t current_speed = this->get_speed ();
 
                     if (current_speed > speed)
                     {
-                        Loco::set_speed (loco_idx, speed, tenths);
+                        this->set_speed (speed, tenths);
                     }
                 }
                 else
                 {
-                    Event::add_event_loco_speed (start, loco_idx, EVENT_SET_LOCO_MAX_SPEED, speed, tenths);
+                    Event::add_event_loco_speed (start, this->id, EVENT_SET_LOCO_MAX_SPEED, speed, tenths);
                 }
                 break;
             }
@@ -939,11 +762,11 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
 
                 if (start == 0)
                 {
-                    Loco::set_fwd (loco_idx, fwd);
+                    this->set_fwd (fwd);
                 }
                 else
                 {
-                    Event::add_event_loco_dir (start, loco_idx, fwd);
+                    Event::add_event_loco_dir (start, this->id, fwd);
                 }
                 break;
             }
@@ -954,11 +777,11 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
 
                 if (start == 0)
                 {
-                    Loco::reset_functions (loco_idx);
+                    this->reset_functions ();
                 }
                 else
                 {
-                    Event::add_event_loco_function (start, loco_idx, 0xFF, false);
+                    Event::add_event_loco_function (start, this->id, 0xFF, false);
                 }
                 break;
             }
@@ -970,11 +793,11 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
 
                 if (start == 0)
                 {
-                    Loco::set_function (loco_idx, f, false);
+                    this->set_function (f, false);
                 }
                 else
                 {
-                    Event::add_event_loco_function (start, loco_idx, f, false);
+                    Event::add_event_loco_function (start, this->id, f, false);
                 }
                 break;
             }
@@ -986,11 +809,11 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
 
                 if (start == 0)
                 {
-                    Loco::set_function (loco_idx, f, true);
+                    this->set_function (f, true);
                 }
                 else
                 {
-                    Event::add_event_loco_function (start, loco_idx, f, true);
+                    Event::add_event_loco_function (start, this->id, f, true);
                 }
                 break;
             }
@@ -998,13 +821,13 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
             case LOCO_ACTION_SET_ADDON_ALL_FUNCTIONS_OFF:                               // parameters: START
             {
                 uint_fast32_t   start       = lap[actionidx].parameters[0];
-                uint_fast16_t   addon_idx   = locos[loco_idx].addon_idx;
+                uint_fast16_t   addon_idx   = this->addon_idx;
 
                 if (addon_idx != 0xFFFF)
                 {
                     if (start == 0)
                     {
-                        AddOn::reset_functions (addon_idx);
+                        AddOns::addons[addon_idx].reset_functions ();
                     }
                     else
                     {
@@ -1018,13 +841,13 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
             {
                 uint_fast32_t   start       = lap[actionidx].parameters[0];
                 uint_fast8_t    f           = lap[actionidx].parameters[1];
-                uint_fast16_t   addon_idx   = locos[loco_idx].addon_idx;
+                uint_fast16_t   addon_idx   = this->addon_idx;
 
                 if (addon_idx != 0xFFFF)
                 {
                     if (start == 0)
                     {
-                        AddOn::set_function (addon_idx, f, false);
+                        AddOns::addons[addon_idx].set_function (f, false);
                     }
                     else
                     {
@@ -1038,13 +861,13 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
             {
                 uint_fast32_t   start       = lap[actionidx].parameters[0];
                 uint_fast8_t    f           = lap[actionidx].parameters[1];
-                uint_fast16_t   addon_idx   = locos[loco_idx].addon_idx;
+                uint_fast16_t   addon_idx   = this->addon_idx;
 
                 if (addon_idx != 0xFFFF)
                 {
                     if (start == 0)
                     {
-                        AddOn::set_function (addon_idx, f, true);
+                        AddOns::addons[addon_idx].set_function (f, true);
                     }
                     else
                     {
@@ -1058,73 +881,63 @@ Loco::execute_macro (uint_fast16_t loco_idx, uint_fast8_t macroidx)
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_function_type_pulse (idx, f, b) - set/reset function to type "pulse"
+ * set_function_type_pulse () - set/reset function to type "pulse"
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_function_type_pulse (uint_fast16_t loco_idx, uint_fast8_t f, bool b)
+Loco::set_function_type_pulse (uint_fast8_t f, bool b)
 {
-    if (loco_idx < Loco::n_locos)
+    uint32_t    f_mask = 1 << f;
+
+    if (b)
     {
-        uint32_t    f_mask = 1 << f;
-
-        if (b)
-        {
-            Loco::locos[loco_idx].locofunction.pulse_mask |= f_mask;
-        }
-        else
-        {
-            Loco::locos[loco_idx].locofunction.pulse_mask &= ~f_mask;
-        }
-
-        Loco::data_changed = true;
+        this->locofunction.pulse_mask |= f_mask;
     }
+    else
+    {
+        this->locofunction.pulse_mask &= ~f_mask;
+    }
+
+    Locos::data_changed = true;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_function_type_sound (idx, f, b) - set/reset function to type "sound"
+ * set_function_type_sound () - set/reset function to type "sound"
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_function_type_sound (uint_fast16_t loco_idx, uint_fast8_t f, bool b)
+Loco::set_function_type_sound (uint_fast8_t f, bool b)
 {
-    if (loco_idx < Loco::n_locos)
+    uint32_t    f_mask = 1 << f;
+
+    if (b)
     {
-        uint32_t    f_mask = 1 << f;
-
-        if (b)
-        {
-            Loco::locos[loco_idx].locofunction.sound_mask |= f_mask;
-        }
-        else
-        {
-            Loco::locos[loco_idx].locofunction.sound_mask &= ~f_mask;
-        }
-
-        Loco::data_changed = true;
+        this->locofunction.sound_mask |= f_mask;
     }
+    else
+    {
+        this->locofunction.sound_mask &= ~f_mask;
+    }
+
+    Locos::data_changed = true;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_function_type (idx, fidx, name) - set function type
+ * set_function_type () - set function type
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::set_function_type (uint_fast16_t loco_idx, uint_fast8_t fidx, uint_fast16_t function_name_idx, bool pulse, bool sound)
+Loco::set_function_type (uint_fast8_t fidx, uint_fast16_t function_name_idx, bool pulse, bool sound)
 {
-    if (loco_idx < Loco::n_locos)
+    if (this->locofunction.max < fidx)
     {
-        if (Loco::locos[loco_idx].locofunction.max < fidx)
-        {
-            Loco::locos[loco_idx].locofunction.max = fidx;
-        }
-
-        Loco::locos[loco_idx].locofunction.name_idx[fidx] = function_name_idx;
-        Loco::set_function_type_pulse (loco_idx, fidx, pulse);
-        Loco::set_function_type_sound (loco_idx, fidx, sound);
-        return 1;
+        this->locofunction.max = fidx;
     }
-    return 0;
+
+    this->locofunction.name_idx[fidx] = function_name_idx;
+    this->set_function_type_pulse (fidx, pulse);
+    this->set_function_type_sound (fidx, sound);
+    return 1;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1132,141 +945,111 @@ Loco::set_function_type (uint_fast16_t loco_idx, uint_fast8_t fidx, uint_fast16_
  *------------------------------------------------------------------------------------------------------------------------
  */
 std::string&
-Loco::get_function_name (uint_fast16_t loco_idx, uint_fast8_t fidx)
+Loco::get_function_name (uint_fast8_t fidx)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        uint_fast16_t    function_name_idx = Loco::locos[loco_idx].locofunction.name_idx[fidx];
-        return Functions::get (function_name_idx);
-    }
-    return Functions::get (0xFFFF);
+    uint_fast16_t    function_name_idx = this->locofunction.name_idx[fidx];
+    return Functions::get (function_name_idx);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_function_name_idx (idx, f) - get function name index
+ * get_function_name_idx () - get function name index
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast16_t
-Loco::get_function_name_idx (uint_fast16_t loco_idx, uint_fast8_t fidx)
+Loco::get_function_name_idx (uint_fast8_t fidx)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        uint_fast16_t    function_name_idx = Loco::locos[loco_idx].locofunction.name_idx[fidx];
-        return function_name_idx;
-    }
-    return 0;
+    uint_fast16_t    function_name_idx = this->locofunction.name_idx[fidx];
+    return function_name_idx;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_function_pulse (idx, f) - get function of type "pulse"
+ * get_function_pulse () - get function of type "pulse"
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-Loco::get_function_pulse (uint_fast16_t loco_idx, uint_fast8_t fidx)
+Loco::get_function_pulse (uint_fast8_t fidx)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        uint32_t        f_mask = 1 << fidx;
-        bool            b = false;
+    uint32_t        f_mask = 1 << fidx;
+    bool            b = false;
 
-        if (Loco::locos[loco_idx].locofunction.pulse_mask & f_mask)
-        {
-            b = true;
-        }
-        return b;
+    if (this->locofunction.pulse_mask & f_mask)
+    {
+        b = true;
     }
-    return false;
+    return b;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_function_pulse_mask (idx, f) - get complete function of type pulse as mask
+ * get_function_pulse_mask () - get complete function of type pulse as mask
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint32_t
-Loco::get_function_pulse_mask (uint_fast16_t loco_idx)
+Loco::get_function_pulse_mask ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return Loco::locos[loco_idx].locofunction.pulse_mask;
-    }
-    return 0;
+    return this->locofunction.pulse_mask;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_function_sound (idx, f) - get function of type "sound"
+ * get_function_sound () - get function of type "sound"
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-Loco::get_function_sound (uint_fast16_t loco_idx, uint_fast8_t fidx)
+Loco::get_function_sound (uint_fast8_t fidx)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        uint32_t        f_mask = 1 << fidx;
-        bool            b = false;
+    uint32_t        f_mask = 1 << fidx;
+    bool            b = false;
 
-        if (Loco::locos[loco_idx].locofunction.sound_mask & f_mask)
-        {
-            b = true;
-        }
-        return b;
+    if (this->locofunction.sound_mask & f_mask)
+    {
+        b = true;
     }
-    return false;
+    return b;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_function_sound_mask (idx, f) - get complete function of type sound as mask
+ * get_function_sound_mask () - get complete function of type sound as mask
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint32_t
-Loco::get_function_sound_mask (uint_fast16_t loco_idx)
+Loco::get_function_sound_mask ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return Loco::locos[loco_idx].locofunction.sound_mask;
-    }
-    return 0;
+    return this->locofunction.sound_mask;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  activate (idx) - activate a loco
+ * activate () - activate a loco
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::activate (uint_fast16_t loco_idx)
+Loco::activate ()
 {
-    if (loco_idx < Loco::n_locos)
+    if (! this->active)
     {
-        if (! Loco::locos[loco_idx].active)
-        {
-            Loco::locos[loco_idx].active = true;
-        }
+        this->active = true;
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  deactivate_loco (idx) - deactivate a loco
+ * deactivate_loco () - deactivate a loco
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::deactivate (uint_fast16_t loco_idx)
+Loco::deactivate ()
 {
-    if (loco_idx < Loco::n_locos)
+    if (this->active)
     {
-        if (Loco::locos[loco_idx].active)
-        {
-            Loco::locos[loco_idx].active = false;
-        }
+        this->active = false;
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  is_active (idx) - check if loco is active
+ * is_active () - check if loco is active
  *------------------------------------------------------------------------------------------------------------------------
  */
-uint_fast8_t
-Loco::is_active (uint_fast16_t loco_idx)
+bool
+Loco::is_active ()
 {
-    if (loco_idx < Loco::n_locos && Loco::locos[loco_idx].active)
+    if (this->active)
     {
         return true;
     }
@@ -1274,43 +1057,40 @@ Loco::is_active (uint_fast16_t loco_idx)
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_online (idx) - set timestamp if loco has been detected by global RAILCOM detector
+ * set_online () - set timestamp if loco has been detected by global RAILCOM detector
  *------------------------------------------------------------------------------------------------------------------------
  */
 #define MAX_OFFLINE_COUNTER_VALUE       4
 void
-Loco::set_online (uint_fast16_t loco_idx, bool value)
+Loco::set_online (bool value)
 {
-    if (loco_idx < Loco::n_locos)
+    if (value)
     {
-        if (value)
+        this->offline_cnt = 0;
+        this->flags |= LOCO_FLAG_ONLINE;
+    }
+    else
+    {
+        if (this->offline_cnt < MAX_OFFLINE_COUNTER_VALUE)
         {
-            Loco::locos[loco_idx].offline_cnt = 0;
-            Loco::locos[loco_idx].flags |= LOCO_FLAG_ONLINE;
+            this->offline_cnt++;
         }
-        else
-        {
-            if (Loco::locos[loco_idx].offline_cnt < MAX_OFFLINE_COUNTER_VALUE)
-            {
-                Loco::locos[loco_idx].offline_cnt++;
-            }
 
-            if (Loco::locos[loco_idx].offline_cnt == MAX_OFFLINE_COUNTER_VALUE)
-            {
-                Loco::locos[loco_idx].flags &= ~LOCO_FLAG_ONLINE;
-            }
+        if (this->offline_cnt == MAX_OFFLINE_COUNTER_VALUE)
+        {
+            this->flags &= ~LOCO_FLAG_ONLINE;
         }
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  is_online (idx) - check if loco is online
+ * is_online () - check if loco is online
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-Loco::is_online (uint_fast16_t loco_idx)
+Loco::is_online ()
 {
-    if (loco_idx < Loco::n_locos && Loco::locos[loco_idx].flags & LOCO_FLAG_ONLINE)
+    if (this->flags & LOCO_FLAG_ONLINE)
     {
         return true;
     }
@@ -1318,25 +1098,35 @@ Loco::is_online (uint_fast16_t loco_idx)
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_speed (idx, speed) - set speed
+ *  set_speed_value (speed) - set only speed variable, nothing else
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_speed (uint_fast16_t loco_idx, uint_fast8_t speed)
+Loco::set_speed_value (uint_fast8_t tspeed)
 {
-    if (loco_idx < Loco::n_locos)
+    if (! (this->flags & LOCO_FLAG_HALT))
     {
-        if (! (Loco::locos[loco_idx].flags & LOCO_FLAG_HALT))
-        {
-            Loco::locos[loco_idx].speed                 = speed;
-            Loco::locos[loco_idx].target_next_millis    = 0;
-            Loco::sendspeed (loco_idx);
-        }
+        this->speed = tspeed;
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_speed (idx, tspeed, tenths) - set speed within tenths of a second
+ * set_speed () - set speed
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Loco::set_speed (uint_fast8_t speed)
+{
+    if (! (this->flags & LOCO_FLAG_HALT))
+    {
+        this->speed                 = speed;
+        this->target_next_millis    = 0;
+        this->sendspeed ();
+    }
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * set_speed () - set speed within tenths of a second
  *
  *  example:
  *      current speed:  20
@@ -1352,226 +1142,203 @@ Loco::set_speed (uint_fast16_t loco_idx, uint_fast8_t speed)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_speed (uint_fast16_t loco_idx, uint_fast8_t tspeed, uint_fast16_t tenths)
+Loco::set_speed (uint_fast8_t tspeed, uint_fast16_t tenths)
 {
     // printf ("loco_idx=%u tspeed=%u, tenths=%u\n", loco_idx, tspeed, tenths);
 
-    if (loco_idx < Loco::n_locos)
+    if (! (this->flags & LOCO_FLAG_HALT))
     {
-        if (! (Loco::locos[loco_idx].flags & LOCO_FLAG_HALT))
+        if (tenths > 0)
         {
-            if (tenths > 0)
-            {
-                uint_fast8_t    cspeed = Loco::locos[loco_idx].speed;       // current speed
+            uint_fast8_t    cspeed = this->speed;       // current speed
 
-                if (tspeed > cspeed)
-                {
-                    Loco::locos[loco_idx].target_speed          = tspeed;
-                    Loco::locos[loco_idx].target_millis_step    = (100 * tenths) / (tspeed - cspeed);
-                    Loco::locos[loco_idx].target_next_millis    = Millis::elapsed() + Loco::locos[loco_idx].target_millis_step;
-                }
-                else if (tspeed < cspeed)
-                {
-                    Loco::locos[loco_idx].target_speed          = tspeed;
-                    Loco::locos[loco_idx].target_millis_step    = (100 * tenths) / (cspeed - tspeed);
-                    Loco::locos[loco_idx].target_next_millis    = Millis::elapsed() + Loco::locos[loco_idx].target_millis_step;
-                }
-                // if speeds are identical, do nothing
-            }
-            else // tenths are 0, set speed immediately
+            if (tspeed > cspeed)
             {
-                Loco::set_speed (loco_idx, tspeed);
+                this->target_speed          = tspeed;
+                this->target_millis_step    = (100 * tenths) / (tspeed - cspeed);
+                this->target_next_millis    = Millis::elapsed() + this->target_millis_step;
             }
+            else if (tspeed < cspeed)
+            {
+                this->target_speed          = tspeed;
+                this->target_millis_step    = (100 * tenths) / (cspeed - tspeed);
+                this->target_next_millis    = Millis::elapsed() + this->target_millis_step;
+            }
+            // if speeds are identical, do nothing
+        }
+        else // tenths are 0, set speed immediately
+        {
+            this->set_speed (tspeed);
         }
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_speed (idx) - get speed
+ * get_speed () - get speed
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint16_t
-Loco::get_speed (uint_fast16_t loco_idx)
+Loco::get_speed ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return (Loco::locos[loco_idx].speed);
-    }
-    return 0;
+    return (this->speed);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_fwd (idx, fwd) - set forward direction
+ * set_fwd () - set forward direction
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_fwd (uint_fast16_t loco_idx, uint_fast8_t fwd)
+Loco::set_fwd (uint_fast8_t fwd)
 {
-    if (loco_idx < Loco::n_locos)
+    if (this->fwd != fwd)
     {
-        if (Loco::locos[loco_idx].fwd != fwd)
-        {
-            uint_fast16_t addon_idx;
-
-            Loco::locos[loco_idx].speed = 0;
-            Loco::locos[loco_idx].fwd = fwd;
-            Loco::sendspeed (loco_idx);
-
-            addon_idx = Loco::locos[loco_idx].addon_idx;
-
-            if (addon_idx != 0xFFFF)
-            {
-                Loco::locos[addon_idx].fwd = fwd;
-                Loco::sendspeed (addon_idx);
-                Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::set_fwd %u to addon %u\n", fwd, addon_idx);
-            }
-        }
+        this->speed = 0;
+        this->fwd = fwd;
+        this->sendspeed ();
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_speed_fwd (idx, speed) - set speed and direction
+ * set_speed_fwd () - set speed and direction
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_speed_fwd (uint_fast16_t loco_idx, uint_fast8_t speed, uint_fast8_t fwd)
+Loco::set_speed_fwd (uint_fast8_t speed, uint_fast8_t fwd)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        Loco::locos[loco_idx].speed = speed;
-        Loco::locos[loco_idx].fwd = fwd;
-        Loco::sendspeed (loco_idx);
-    }
+    this->speed = speed;
+    this->fwd = fwd;
+    this->sendspeed ();
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_fwd (idx) - get direction
+ * get_fwd () - get direction
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::get_fwd (uint_fast16_t loco_idx)
+Loco::get_fwd ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return Loco::locos[loco_idx].fwd;
-    }
-
-    return 0;
+    return this->fwd;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  set_function (idx, f) - set a function
+ * set_function () - set a function
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_function (uint_fast16_t loco_idx, uint_fast8_t f, bool b)
+Loco::set_function (uint_fast8_t f, bool b)
 {
-    if (loco_idx < Loco::n_locos)
+    uint32_t        fmask = 1 << f;
+    uint_fast16_t   addon_idx = this->addon_idx;
+    uint_fast8_t    range;
+
+    if (b)
     {
-        uint32_t        fmask = 1 << f;
-        uint_fast16_t   addon_idx = Loco::locos[loco_idx].addon_idx;
-        uint_fast8_t    range;
+        this->functions |= fmask;
 
-        if (b)
+        if (fmask & this->locofunction.pulse_mask)          // function is of type pulse
         {
-            Loco::locos[loco_idx].functions |= fmask;
-
-            if (fmask & Loco::locos[loco_idx].locofunction.pulse_mask)          // function is of type pulse
-            {
-                Event::add_event_loco_function (2, loco_idx, f, false);         // reset function in 200 msec
-            }
+            Event::add_event_loco_function (2, this->id, f, false);         // reset function in 200 msec
         }
-        else
-        {
-            Loco::locos[loco_idx].functions &= ~fmask;
-        }
-
-        if (addon_idx != 0xFFFF)
-        {
-            uint_fast8_t cf = Loco::locos[loco_idx].coupled_functions[f];
-
-            if (cf != 0xFF)
-            {
-                AddOn::set_function (addon_idx, cf, b);
-            }
-        }
-
-        if (f <= 4)
-        {
-            range = DCC_F00_F04_RANGE;
-        }
-        else if (f <= 8)
-        {
-            range = DCC_F05_F08_RANGE;
-        }
-        else if (f <= 12)
-        {
-            range = DCC_F09_F12_RANGE;
-        }
-        else if (f <= 20)
-        {
-            range = DCC_F13_F20_RANGE;
-        }
-        else if (f <= 28)
-        {
-            range = DCC_F21_F28_RANGE;
-        }
-        else
-        {
-            range = DCC_F29_F36_RANGE;
-        }
-
-        Loco::sendfunction (loco_idx, range);
     }
+    else
+    {
+        this->functions &= ~fmask;
+    }
+
+    if (addon_idx != 0xFFFF)
+    {
+        uint_fast8_t cf = this->coupled_functions[f];
+
+        if (cf != 0xFF)
+        {
+            AddOns::addons[addon_idx].set_function (cf, b);
+        }
+    }
+
+    if (f <= 4)
+    {
+        range = DCC_F00_F04_RANGE;
+    }
+    else if (f <= 8)
+    {
+        range = DCC_F05_F08_RANGE;
+    }
+    else if (f <= 12)
+    {
+        range = DCC_F09_F12_RANGE;
+    }
+    else if (f <= 20)
+    {
+        range = DCC_F13_F20_RANGE;
+    }
+    else if (f <= 28)
+    {
+        range = DCC_F21_F28_RANGE;
+    }
+    else
+    {
+        range = DCC_F29_F36_RANGE;
+    }
+
+    this->sendfunction (range);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_function (idx, f)
+ * get_function ()
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::get_function (uint_fast16_t loco_idx, uint_fast8_t f)
+Loco::get_function (uint_fast8_t f)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        uint32_t mask = 1 << f;
-        return (Loco::locos[loco_idx].functions & mask) ? true : false;
-    }
-    return false;
+    uint32_t mask = 1 << f;
+    return (this->functions & mask) ? true : false;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  reset_functions (idx)
+ * reset_functions ()
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::reset_functions (uint_fast16_t loco_idx)
+Loco::reset_functions ()
 {
-    if (loco_idx < Loco::n_locos)
+    this->functions = 0;       // let scheduler turn off functions
+
+    uint_fast16_t addon_idx = this->addon_idx;
+
+    if (addon_idx != 0xFFFF)
     {
-        Loco::locos[loco_idx].functions = 0;       // let scheduler turn off functions
-
-        uint_fast16_t addon_idx = Loco::locos[loco_idx].addon_idx;
-
-        if (addon_idx != 0xFFFF)
-        {
-            Loco::locos[addon_idx].functions = 0;
-        }
+        AddOns::addons[addon_idx].reset_functions ();
     }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
- *  get_functions (idx, f)
+ * get_functions ()
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint32_t
-Loco::get_functions (uint_fast16_t loco_idx)
+Loco::get_functions ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        return Loco::locos[loco_idx].functions;
-    }
-    return 0;
+    return this->functions;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * set_destination (uint_fast8_t rrg)
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Loco::set_destination (uint_fast8_t rrg)
+{
+    this->destination = rrg;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ * get_destination ()
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+uint_fast8_t
+Loco::get_destination (void)
+{
+    return this->destination;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1579,13 +1346,17 @@ Loco::get_functions (uint_fast16_t loco_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_rcllocation (uint_fast16_t loco_idx, uint_fast8_t location)
+Loco::set_rcllocation (uint_fast8_t location)
 {
-    Debug::printf (DEBUG_LEVEL_NORMAL, "Loco::set_rcllocation: loco_idx=%u location=%u\n", loco_idx, location);
-
-    if (loco_idx < Loco::n_locos)
+    if (location == 0xFF || location < RCL::get_n_tracks ())
     {
-        Loco::locos[loco_idx].rcl_location = location;
+        Debug::printf (DEBUG_LEVEL_NORMAL, "Loco::set_rcllocation: loco_idx=%u location=%u\n", this->id, location);
+        this->rcl_location = location;
+    }
+    else
+    {
+        this->rcl_location = 0xFF;                              // set to unknown
+        Debug::printf (DEBUG_LEVEL_NONE, "Loco::set_rcllocation: loco_idx=%u location=%u: invalid location\n", this->id, location);
     }
 }
 
@@ -1594,15 +1365,10 @@ Loco::set_rcllocation (uint_fast16_t loco_idx, uint_fast8_t location)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::get_rcllocation (uint_fast16_t loco_idx)
+Loco::get_rcllocation ()
 {
-    uint_fast8_t    rtc = 0xFF;
-
-    if (loco_idx < Loco::n_locos)
-    {
-        rtc = Loco::locos[loco_idx].rcl_location;
-    }
-
+    uint_fast8_t    rtc;
+    rtc = this->rcl_location;
     return rtc;
 }
 
@@ -1611,14 +1377,10 @@ Loco::get_rcllocation (uint_fast16_t loco_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_rrlocation (uint_fast16_t loco_idx, uint_fast16_t rrgrridx)
+Loco::set_rrlocation (uint_fast16_t rrgrridx)
 {
-    Debug::printf (DEBUG_LEVEL_NORMAL, "Loco::set_rrlocation: loco_idx=%u rrgidx=%u rridx=%u\n", loco_idx, rrgrridx >> 8, rrgrridx & 0xFF);
-
-    if (loco_idx < Loco::n_locos)
-    {
-        Loco::locos[loco_idx].rr_location = rrgrridx;                   // maybe 0xFFFF
-    }
+    Debug::printf (DEBUG_LEVEL_NORMAL, "Loco::set_rrlocation: loco_idx=%u rrgidx=%u rridx=%u\n", this->id, rrgrridx >> 8, rrgrridx & 0xFF);
+    this->rr_location = rrgrridx;                   // maybe 0xFFFF
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1626,15 +1388,10 @@ Loco::set_rrlocation (uint_fast16_t loco_idx, uint_fast16_t rrgrridx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast16_t
-Loco::get_rrlocation (uint_fast16_t loco_idx)
+Loco::get_rrlocation ()
 {
-    uint_fast16_t   rtc = 0xFFFF;
-
-    if (loco_idx < Loco::n_locos)
-    {
-        rtc = Loco::locos[loco_idx].rr_location;
-    }
-
+    uint_fast16_t rtc;
+    rtc = this->rr_location;
     return rtc;
 }
 
@@ -1643,29 +1400,9 @@ Loco::get_rrlocation (uint_fast16_t loco_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::estop (uint_fast16_t loco_idx)
+Loco::estop ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        Loco::set_speed (loco_idx, 1);
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  estop (void)
- *------------------------------------------------------------------------------------------------------------------------
- */
-void
-Loco::estop (void)
-{
-    uint_fast16_t loco_idx;
-
-    DCC::estop ();
-
-    for (loco_idx = 0; loco_idx < Loco::n_locos; loco_idx++)
-    {
-        Loco::locos[loco_idx].speed = 1;
-    }
+    this->set_speed (1);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1673,57 +1410,9 @@ Loco::estop (void)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::get_ack (uint_fast16_t loco_idx)
+Loco::get_ack ()
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        DCC::get_ack (Loco::locos[loco_idx].addr);
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  booster_off (void)
- *------------------------------------------------------------------------------------------------------------------------
- */
-void
-Loco::booster_off (bool do_send_booster_cmd)
-{
-    uint_fast16_t loco_idx;
-
-    if (do_send_booster_cmd)
-    {
-        DCC::booster_off ();
-    }
-
-    for (loco_idx = 0; loco_idx < Loco::n_locos; loco_idx++)
-    {
-        Loco::locos[loco_idx].speed         = 0;
-        Loco::locos[loco_idx].rcl_location  = 0xFF;
-        Loco::locos[loco_idx].rr_location   = 0xFFFF;
-        Loco::locos[loco_idx].rc2_rate      = 0;
-    }
-}
-
-/*------------------------------------------------------------------------------------------------------------------------
- *  booster_on (void)
- *------------------------------------------------------------------------------------------------------------------------
- */
-void
-Loco::booster_on (bool do_send_booster_cmd)
-{
-    uint_fast16_t loco_idx;
-
-    for (loco_idx = 0; loco_idx < Loco::n_locos; loco_idx++)
-    {
-        Loco::locos[loco_idx].speed         = 0;
-        Loco::locos[loco_idx].rcl_location  = 0xFF;
-        Loco::locos[loco_idx].rr_location   = 0xFFFF;
-    }
-
-    if (do_send_booster_cmd)
-    {
-        DCC::booster_on ();
-    }
+    DCC::get_ack (this->addr);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1731,13 +1420,10 @@ Loco::booster_on (bool do_send_booster_cmd)
  *------------------------------------------------------------------------------------------------------------------------
  */
 void
-Loco::set_rc2_rate (uint_fast16_t loco_idx, uint_fast8_t rate)
+Loco::set_rc2_rate (uint_fast8_t rate)
 {
-    if (loco_idx < Loco::n_locos)
-    {
-        Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::set_rc2_rate: loco_idx=%u rate=%u\n", (uint16_t) loco_idx, (uint16_t) rate);
-        Loco::locos[loco_idx].rc2_rate = rate;
-    }
+    Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::set_rc2_rate: loco_idx=%u rate=%u\n", (uint16_t) this->id, (uint16_t) rate);
+    this->rc2_rate = rate;
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1745,14 +1431,148 @@ Loco::set_rc2_rate (uint_fast16_t loco_idx, uint_fast8_t rate)
  *------------------------------------------------------------------------------------------------------------------------
  */
 uint_fast8_t
-Loco::get_rc2_rate (uint_fast16_t loco_idx)
+Loco::get_rc2_rate ()
 {
-    if (loco_idx < Loco::n_locos)
+    Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::get_rc2_rate: loco_idx=%u rate=%u\n", (uint16_t) this->id, (uint16_t) this->rc2_rate);
+    return this->rc2_rate;
+}
+
+void
+Loco::sched ()
+{
+    if (this->active && this->addr != 0)
     {
-        Debug::printf (DEBUG_LEVEL_VERBOSE, "Loco::get_rc2_rate: loco_idx=%u rate=%u\n", (uint16_t) loco_idx, (uint16_t) Loco::locos[loco_idx].rc2_rate);
-        return Loco::locos[loco_idx].rc2_rate;
+        uint_fast8_t packet_sequence_idx = this->packet_sequence_idx;
+
+        this->sendcmd (packet_sequence_idx);
+        packet_sequence_idx++;
+
+        if (packet_sequence_idx >= MAX_PACKET_SEQUENCES)
+        {
+            packet_sequence_idx = 0;
+        }
+
+        this->packet_sequence_idx = packet_sequence_idx;
     }
-    return 0;
+}
+
+uint_fast16_t
+Locos::add (const Loco& loco)
+{
+    uint_fast16_t rtc = 0xFFFF;
+
+    if (Locos::n_locos < MAX_LOCOS)
+    {
+        Locos::locos.push_back(loco);
+        Locos::locos[n_locos].set_id(n_locos);
+        Locos::n_locos++;
+        Locos::data_changed = true;
+        rtc = locos.size() - 1;
+    }
+    return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  get_n_locos () - get number of locos
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+uint_fast16_t
+Locos::get_n_locos (void)
+{
+    return Locos::n_locos;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  set_new_id () - set new id
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+uint_fast16_t
+Locos::set_new_id (uint_fast16_t loco_idx, uint_fast16_t new_loco_idx)
+{
+    uint_fast16_t   rtc = 0xFFFF;
+
+    if (loco_idx < Locos::n_locos && new_loco_idx < Locos::n_locos)
+    {
+        if (loco_idx != new_loco_idx)
+        {
+            Loco            tmploco;
+            uint_fast16_t   lidx;
+
+            uint16_t *      map_new_loco_idx = (uint16_t *) calloc (Locos::n_locos, sizeof (uint16_t));
+
+            for (lidx = 0; lidx < Locos::n_locos; lidx++)
+            {
+                map_new_loco_idx[lidx] = lidx;
+            }
+
+            tmploco = Locos::locos[loco_idx];
+
+            if (new_loco_idx < loco_idx)
+            {
+                // step 1: shift loco
+                for (lidx = loco_idx; lidx > new_loco_idx; lidx--)
+                {
+                    Locos::locos[lidx] = Locos::locos[lidx - 1];
+                    map_new_loco_idx[lidx - 1] = lidx;
+                }
+            }
+            else // if (new_loco_idx > loco_idx)
+            {
+                // step 1: shift loco
+                for (lidx = loco_idx; lidx < new_loco_idx; lidx++)
+                {
+                    Locos::locos[lidx] = Locos::locos[lidx + 1];
+                    map_new_loco_idx[lidx + 1] = lidx;
+                }
+            }
+
+            Locos::locos[lidx] = tmploco;
+            map_new_loco_idx[loco_idx] = lidx;
+
+            for (lidx = 0; lidx < Locos::n_locos; lidx++)
+            {
+                Debug::printf (DEBUG_LEVEL_VERBOSE, "%2d -> %2d\n", lidx, map_new_loco_idx[lidx]);
+            }
+
+            // step 2: correct loco_idx in ADDON, RAILROAD, RCL, S88
+            AddOns::set_new_loco_ids (map_new_loco_idx, Locos::n_locos);
+            RailroadGroups::set_new_loco_ids (map_new_loco_idx, Locos::n_locos);
+            RCL::set_new_loco_ids (map_new_loco_idx, Locos::n_locos);
+            S88::set_new_loco_ids (map_new_loco_idx, Locos::n_locos);
+
+            free (map_new_loco_idx);
+            Locos::data_changed = true;
+            rtc = new_loco_idx;
+
+            Locos::renumber ();
+        }
+        else
+        {
+            rtc = loco_idx;
+        }
+    }
+
+    return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  Loco::set_new_addon_ids ()
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Locos::set_new_addon_ids (uint16_t * map_new_addon_idx, uint16_t n_addons)
+{
+    uint_fast16_t     loco_idx;
+
+    for (loco_idx = 0; loco_idx < Locos::n_locos; loco_idx++)
+    {
+        uint_fast16_t     addon_idx = Locos::locos[loco_idx].get_addon();
+
+        if (addon_idx < n_addons)
+        {
+            Locos::locos[loco_idx].set_addon (map_new_addon_idx[addon_idx]);
+        }
+    }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------
@@ -1760,7 +1580,7 @@ Loco::get_rc2_rate (uint_fast16_t loco_idx)
  *------------------------------------------------------------------------------------------------------------------------
  */
 bool
-Loco::schedule (void)
+Locos::schedule (void)
 {
     static bool             handle_locos = true;
     static uint_fast16_t    loco_idx = 0;
@@ -1768,26 +1588,12 @@ Loco::schedule (void)
 
     if (handle_locos)
     {
-        if (loco_idx < Loco::n_locos)
+        if (loco_idx < Locos::n_locos)
         {
-            if (Loco::locos[loco_idx].active && Loco::locos[loco_idx].addr != 0)
-            {
-                uint_fast8_t packet_sequence_idx = Loco::locos[loco_idx].packet_sequence_idx;
-
-                Loco::sendcmd (loco_idx, packet_sequence_idx);
-                packet_sequence_idx++;
-
-                if (packet_sequence_idx >= MAX_PACKET_SEQUENCES)
-                {
-                    packet_sequence_idx = 0;
-                }
-
-                Loco::locos[loco_idx].packet_sequence_idx = packet_sequence_idx;
-            }
-
+            Locos::locos[loco_idx].sched();
             loco_idx++;
 
-            if (loco_idx >= Loco::n_locos)
+            if (loco_idx >= Locos::n_locos)
             {
                 loco_idx = 0;
                 handle_locos = false;
@@ -1801,7 +1607,7 @@ Loco::schedule (void)
     }
     else // addons
     {
-        rtc = AddOn::schedule ();
+        rtc = AddOns::schedule ();
 
         if (rtc)
         {
@@ -1810,4 +1616,82 @@ Loco::schedule (void)
     }
 
     return rtc;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  renumber () - renumber ids
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Locos::renumber ()
+{
+    uint_fast16_t loco_idx;
+
+    for (loco_idx = 0; loco_idx < Locos::n_locos; loco_idx++)
+    {
+        Locos::locos[loco_idx].set_id (loco_idx);
+    }
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  estop (void)
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Locos::estop (void)
+{
+    uint_fast16_t loco_idx;
+    uint_fast16_t n_locos = Locos::get_n_locos();
+    DCC::estop ();
+
+    for (loco_idx = 0; loco_idx < n_locos; loco_idx++)
+    {
+        Locos::locos[loco_idx].set_speed_value (1);
+    }
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  booster_off (void)
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Locos::booster_off (bool do_send_booster_cmd)
+{
+    uint_fast16_t loco_idx;
+
+    if (do_send_booster_cmd)
+    {
+        DCC::booster_off ();
+    }
+
+    for (loco_idx = 0; loco_idx < Locos::n_locos; loco_idx++)
+    {
+        Locos::locos[loco_idx].set_speed_value(0);              // only set variable, nothing else
+        Locos::locos[loco_idx].set_rcllocation(0xFF);
+        Locos::locos[loco_idx].set_rrlocation (0xFFFF);
+        Locos::locos[loco_idx].set_rc2_rate (0);
+    }
+}
+
+/*------------------------------------------------------------------------------------------------------------------------
+ *  booster_on (void)
+ *------------------------------------------------------------------------------------------------------------------------
+ */
+void
+Locos::booster_on (bool do_send_booster_cmd)
+{
+    uint_fast16_t loco_idx;
+
+    for (loco_idx = 0; loco_idx < Locos::n_locos; loco_idx++)
+    {
+        Locos::locos[loco_idx].set_speed_value(0);              // only set variable, nothing else
+        Locos::locos[loco_idx].set_rcllocation(0xFF);
+        Locos::locos[loco_idx].set_rrlocation (0xFFFF);
+        Locos::locos[loco_idx].set_rc2_rate (0);
+    }
+
+    if (do_send_booster_cmd)
+    {
+        DCC::booster_on ();
+    }
 }

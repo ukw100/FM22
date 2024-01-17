@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
- * http-pom.h - HTTP POM routines
+ * http-illu.h - HTTP illumination routines
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2022-2023 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,17 +17,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *------------------------------------------------------------------------------------------------------------------------
  */
-#ifndef HTTP_POM_H
-#define HTTP_POM_H
+#ifndef HTTP_ILLU_H
+#define HTTP_ILLU_H
 
 #include <stdint.h>
 
-class HTTP_POM
+class HTTP_Illu
 {
     public:
-        static void     handle_pominfo (void);
-        static void     handle_pomaddr (void);
-        static void     handle_pomcv (void);
+        static void     handle_illu (void);
+        static void     handle_illu_macro_edit (void);
+        static void     action_illus (void);
+        static void     action_illu (void);
+        static void     action_getf (void);
+        static void     action_macro (void);
+        static void     action_setspeed (void);
+        static void     action_togglefunction (void);
     private:
 };
 

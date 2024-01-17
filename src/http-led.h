@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------------------------------------------------
- * http-pom.h - HTTP POM routines
+ * http-led.h - HTTP led routines
  *------------------------------------------------------------------------------------------------------------------------
  * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
@@ -17,17 +17,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *------------------------------------------------------------------------------------------------------------------------
  */
-#ifndef HTTP_POM_H
-#define HTTP_POM_H
+#ifndef HTTP_LED_H
+#define HTTP_LED_H
 
 #include <stdint.h>
 
-class HTTP_POM
+class HTTP_Led
 {
     public:
-        static void     handle_pominfo (void);
-        static void     handle_pomaddr (void);
-        static void     handle_pomcv (void);
+        static void     handle_led (void);
+        static void     handle_led_test (void);
+        static void     action_setled (void);
+        static void     action_led (void);
     private:
 };
 

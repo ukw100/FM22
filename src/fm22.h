@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------------------------------------------------
- * http-pom.h - HTTP POM routines
+ * fm22.h - fm22 management functions
  *------------------------------------------------------------------------------------------------------------------------
  * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
  *
@@ -17,17 +17,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *------------------------------------------------------------------------------------------------------------------------
  */
-#ifndef HTTP_POM_H
-#define HTTP_POM_H
+#ifndef FM22_H
+#define FM22_H
 
 #include <stdint.h>
+#include <string>
 
-class HTTP_POM
+#define FM22_SHORTCUT_DEFAULT           1000
+
+class FM22
 {
     public:
-        static void     handle_pominfo (void);
-        static void     handle_pomaddr (void);
-        static void     handle_pomcv (void);
+        static uint_fast16_t            shortcut_value;
+        static bool                     data_changed;
+        static void                     set_shortcut_value (uint_fast16_t value);
+        static uint_fast16_t            get_shortcut_value ();
+
     private:
 };
 
