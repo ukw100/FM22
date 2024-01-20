@@ -373,8 +373,8 @@ die Anzeigereihenfolge über die ID bewerkstelligen:
 Unter dem Menüpunkt "LEDs" können Lichtsignale gesteuert werden, die mehr als 2 Zustände anzeigen können. Das sind entweder komplexere
 Lichtsignale oder es können auch Beleuchtungen von Gebäuden sein, zum Beispiel durch Verwendung eine FM22-RC-Detektors mit WS2812-LED-Ausgang.
 
-In der Regel werden für komplexe Lichtsignale sogenenannt "erweiterte Zubehördecoder" verwendet. Hier wird dann zum Decoder nicht
-nur zwei Zustände wie "Fahrt" und "Halt" übertragen, sondern ein ganzes Byte, welches insgresamt 256 Zustände annehmen kann bzw. bis zu 8 LEDs
+In der Regel werden für komplexe Lichtsignale sogenannte "erweiterte Zubehördecoder" verwendet. Hier werden dann zum Decoder nicht
+nur zwei Zustände wie "Fahrt" und "Halt" übertragen, sondern ein ganzer Byte-Wert, welches insgesamt 256 Zustände annehmen kann bzw. bis zu 8 LEDs
 unabhängig voneinander steuert.
 
 Im untenstehenden Beispiel wurden zwei LED-Gruppen von je 8 LEDs angelegt, nämlich ein "Brückenstellwerk" und noch die Beleuchtung
@@ -383,10 +383,11 @@ des Bahnhofs "Kümmelhausen":
 ![DCC-FM22 LEDs](https://raw.githubusercontent.com/ukw100/FM22/main/images/leds.png "LEDs")
 
 Hier können jeweils 8 LEDs (0-7) unabhängig voneinander manuell ein- und ausgeschaltet werden. Der aktuelle Zustand wird durch einen
-grünen Hintergrund dargestellt: Die entsprechenden LEDs sind damit eingestellt.
+grünen Hintergrund dargestellt: Die entsprechenden LEDs sind damit eingeschaltet. Die Anzeige ändert sich automatisch in Echtzeit, wenn
+irgendeines der LED-Signale einen anderen Zustand annimmt.
 
-Selbstverständlich lassen sich die Lichtzustände automatisiert als RailCom-Detektor- oder S88-Kontaktgleis-Aktionen automatisiert steuern.
-Dazu werden weiter unten entsprechende Beispiele aufgeführt.
+Selbstverständlich lassen sich die Lichtzustände automatisiert als RailCom-Detektor- oder S88-Kontaktgleis-Aktionen steuern. Dazu werden
+weiter unten entsprechende Beispiel-Anwendungen aufgeführt.
 
 Bei der Bearbeitung der LED-Konfiguration können der Name und die Adresse der LED-Gruppe neu eingestellt werden. Ebenso kann man über
 die Angabe einer neuen ID die Anzeigereihenfolge ändern:
@@ -427,6 +428,7 @@ Das Menü "Programmierung" bietet folgende Punkte:
   * [POM Decoder-Info](#pom-decoder-info)
   * [POM Decoder-Adresse](#pom-decoder-adresse)
   * [POM Decoder-CV](#pom-decoder-cv)
+  * [POM Decoder-Motorparameter](#pom-decoder-motorparameter)
   * [POM Funktionsmapping](#pom-funktionsmapping)
   * [POM Funktionsausgänge](#pom-funktionsausgänge)
 
@@ -466,6 +468,43 @@ Das Menü "Programmierung" bietet folgende Punkte:
 ![DCC-FM22 Funktionsmapping Lenz](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-lenz.png "Funktionsmapping Lenz")
 
 ![DCC-FM22 Funktionsmapping ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-esu.png "Funktionsmapping ESU")
+
+### POM Decoder-Motorparameter
+
+Unter dem Menüpunkt "Motorparameter" lassen sich die für die Ansteuerung eines Lokmotors zuständigen Einstellungen gezielt anpassen. Hier
+wird schwerpunktmäßig auf die Einstellungen der ESU-Lokdecoder eingegangen, da diese den größtmöglichen Rahmen von Einstellungsmöglichkeiten
+bilden.
+
+Nach der Auswahl des Menüpunktes "Motorparameter" muss zunächst der Hersteller ermittelt werden. Dafür ist die Angabe der Lokadresse notwendig:
+
+![DCC-FM22 Motorparameter](https://raw.githubusercontent.com/ukw100/FM22/main/images/motorparameter.png "Motorparameter")
+
+Nachdem die Adresse eingegeben wurde, wird der Hersteller automatisch ermittelt und angezeigt. Im untenstehenden Beispiel ist der Hersteller
+"Electronic Solutions Ulm GmbH" oder auch kurz "ESU":
+
+![DCC-FM22 Motorparameter Hersteller](https://raw.githubusercontent.com/ukw100/FM22/main/images/images/motorparameter-hersteller.png "Motorparameter Decoderhersteller")
+
+Mit der Betätigung der Schaltfläche "Motorparameter lesen" werden nun alle für die Motorkonfiguration zuständigen Konfigurationsvariablen ("CVs")
+eingelesen und kompakt angezeigt:
+
+![DCC-FM22 Motorparameter bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/images/motorparameter-bearbeiten.png "Motorparameter bearbeiten")
+
+ESU selbst bietet für gängige Motor-/Lokhersteller bereits vorkonfigurierte Einstellungen an. Dabei werden alle vorkonfigurierte CV-Werte, die mit
+den tatsächlich ausgelesenen Werten übereinstimmen, in grün angezeigt. Stimmen sämtliche gelesene CV-Variablen mit einer Beispielkonfiguration
+ausnahmslos überein, wird der Motortyp zusätzlich grün hinterlegt. Im obigen Beispiel entspricht die ausgelesene Konfiguration der von der ESU
+präferierten Einstellung für einen Märklin® 5-Sterne-Hochleistungsmotor.
+
+Möchte man die Konfiguration ändern, kann man durch Betätigen einer der Schaltflächen "Speichern" eine vorkongurierte Einstellung übernehmen oder
+in der letzten Zeile die CV-Werte individuell anpassen.
+
+### POM Funktionsmapping
+
+![DCC-FM22 Funktionsmapping](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-1.png "Funktionsmapping")
+
+![DCC-FM22 Funktionsmapping Lenz](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-lenz.png "Funktionsmapping Lenz")
+
+![DCC-FM22 Funktionsmapping ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-esu.png "Funktionsmapping ESU")
+
 
 ### POM Funktionsausgänge
 
