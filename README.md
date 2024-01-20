@@ -140,11 +140,13 @@ wird, ändert sich auch instantan der Online-Status. Dieser wechselt dann auf di
 
 Durch die Buttons "MF" und "MH" können automatisiert Abläufe (Macros) gestartet werden, zum Beispiel für "MF" (Macro "Fahrt"):
 
-* Einschalten der Beleuchtung
-* Nach 2 Sekunden Einschalten des Betriebsgeräusches
-* Nach 4 Sekunden Bahnhofsdurchsage
-* Nach 10 Sekunden Schaffnerpfiff
-* Nach 15 Sekunden Fahrtaufnahme Erhöhung der Geschwindigkeit über eine Rampendefinition.
+* Einschalten der Stirnbeleuchtung
+* Nach 5 Sekunden Einschalten der Innenbeleuchtung
+* Nach 7 Sekunden Einschalten des Betriebsgeräusches
+* Nach 10 Sekunden Bahnhofsdurchsage
+* Nach 15 Sekunden Schaffnerpfiff
+* Nach 18 Sekunden Fahrtaufnahme durch Erhöhung der Geschwindigkeit über eine Rampendefinition.
+* Nach 24 Sekunden Lokpfiff
 
 Diese war nur ein Beispiel. Insgesamt können bis zu 8 Macros pro Lok definiert werden. Weitere Informationen siehe [Lok-Macros](#lok-macros).
 
@@ -164,16 +166,18 @@ So können direkt mehrere Personen verschiedene Loks gleichzeitig steuern.
 
 Hier sieht man:
 
-* Lokadresse
+* Lokadresse mit Online-Status
 * Aufenthaltsort der Lok
 * Aktuelle Geschwindigkeit der Lok
 * Richtung
+* Fahrtziel
 * Bezeichnungen und Zustände der Funktionstasten
 
 ![DCC-FM22 Loksteuerung](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok1.png "Loksteuerung")
 
-Im obigen Beispiel wird als Lokadresse 1013, als Aufenthaltsort "Einfahrt Schattenbahhnhof", als Geschwindigkeit "60" und als Richtung "vorwärts"
-ausgegeben. Außerdem ist gerade die Funktion F0 "Spitzensignal / Schlußlicht rot" aktiv.
+Im obigen Beispiel wird als Lokadresse 1012 ausgegeben. Die Adresse ist grün hinterlegt, um zu signalisieren, dass die Lok "online" ist.
+Der Aufenthaltsort der Lok ist gerade "Einfahrt Schattenbahhnhof", die Geschwindigkeit ist "0" und die Richtung ist "vorwärts".
+Außerdem ist gerade die Funktion F0 "Spitzensignal / Schlusslicht rot" aktiv.
 
 Alle Ausgaben können sich sofort ändern, wenn eine andere Person oder eine aktivierte Ereignissteuerung in den Ablauf eingreift. Mittels
 Schieberegler kann die Geschwindigkeit, mit den Pfeilen darunter kann die Fahrtrichtung geändert werden. Ein Klick auf das schwarze Quadrat
@@ -189,8 +193,9 @@ im Bearbeitungsmodus. Es erscheinen dann direkt unterhalb des Buttons Eingabefel
 
 ![DCC-FM22 Neue Lok](https://raw.githubusercontent.com/ukw100/FM22/main/images/neue-lok.png "Neue Lok")
 
-Im obigen Beispiel wurde als Name "BR111 S-Bahn" gewählt, die Adresse auf 1042 gesetzt und die Fahrstufen mit "128" angegeben.
-Nach Klick auf Speichern erscheint dann die neue Lok in der Lokliste.
+Im obigen Beispiel wurde als Name "BR 628 Triebwagenzug" gewählt, die Adresse auf 1019 gesetzt und die Fahrstufen mit "128" angegeben.
+Wird die Lok als "Aktiv" eingestellt, wird sie auch durch Lokbefehle gesteuert. Ist die Lok hier deaktiviert, werden keine Lokbefehle
+an die Lok gesandt. Nach Klick auf Speichern erscheint dann die neue Lok in der Lokliste.
 
 ### Lok bearbeiten
 
@@ -198,40 +203,148 @@ Klickt man in der Lokliste auf den Button "Bearbeiten", kann man die Grundeinste
 
 ![DCC-FM22 Lok bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok-bearbeiten.png "Lok bearbeiten")
 
-Durch Einstellung der ID kann man auch den gewänschten Lokeintrag in der Liste von oben nach unten und umgekehrt "wandern" lassen,
-die Lokliste also neu sortieren.
+Durch Einstellung der ID kann man auch den gewünschten Lokeintrag in der Liste von oben nach unten und umgekehrt "wandern" lassen,
+die Lokliste also neu sortieren. Sonst gelten dieselben Einstellungen wie bei einer neuen Lok.
 
 ### Lok-Macros
 
+Durch Lok-Macros können bestimmte Aktionen automatisiert ablaufen. Insgesamt sind bis zu 16 Aktionen pro Lok-Macro möglich. Im unteren
+Beispiel sind folgende Aktionen eingestellt:
+
+* Schalte die Funktion F0 sofort ein
+* Schalte die Funktion F2 sofort ein
+* Fahre die Geschwindigkeit nach 2 Sekunden auf 60 in einer Rampe mit Dauer von 8 Sekunden
+
 ![DCC-FM22 Lok Macro MF 1](https://raw.githubusercontent.com/ukw100/FM22/main/images/macro1.png "Lok Macro MF 1")
 
+Folgende Aktionen sind möglich:
+
+* Setze Geschwindigkeit
+* Setze Mindestgeschwindigkeit
+* Setze Höchstgeschwindigkeit
+* Setze Richtung
+* Schalte alle Funktionen aus
+* Schalte Funktion aus
+* Schalte Funktion ein
+
 ![DCC-FM22 Lok Macro MF 2](https://raw.githubusercontent.com/ukw100/FM22/main/images/macro2.png "Lok Macro MF 2")
+
+Hier ein weiteres Beispiel, um eine Lok im Schattenbahnhof auf Ihrem zugeordneten Gleis abzustellen:
+
+* Setze Geschwindigkeit sofort auf 0
+* Schalte nach 2 Sekunden F2 (Betriebsgeräusch) aus
+* Schalte nach 15,5 Sekunden alle Funktionen aus.
 
 ![DCC-FM22 Lok Macro MH](https://raw.githubusercontent.com/ukw100/FM22/main/images/macro3.png "Lok Macro MH")
 
 ### Zusatzdecoder
 
+Zusatzdecoder sind weitere Decoder im Zug. Das kann zum Beispiel ein Lichtdecoder im Steuerwagen des Zugs sein, hier beispielsweise
+für einen IC-Steuerwagen:
+
 ![DCC-FM22 Zusatzdecoder](https://raw.githubusercontent.com/ukw100/FM22/main/images/zusatzdecoder.png "Zusatzdecoder")
+
+Man konfiguriert einen neuen Zusatzdecoder über den entsprechenden Button. Anschließend wählt man aus bzw. stellt man ein:
+
+* Name, z.B. Inennbeleuchtung ICE2
+* Adresse, hier 2001
+* Verknüpfung mit Lok im Zug
+
+Durch die Verknüpfung des Zusatzdecoders mit der dazugehörenden Lok erscheinen die möglichen Zusatzfunktionen des Decoders bei
+der Bedienung der Lok. Ein Beispiel dazu folgt weiter unten.
 
 ![DCC-FM22 Zusatzdecoder neu](https://raw.githubusercontent.com/ukw100/FM22/main/images/addon-neu.png "Zusatzdecoder neu")
 
+Durch Klick auf "Bearbeiten lassen sich die Einstellungen nachträglich ändern. Außerdem kann man durch Angabe einer abweichenden ID
+die Reihenfolge der Zusatzdecoder in der Anzeige ändern.
+
 ![DCC-FM22 Zusatzdecoder bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/addon-bearbeiten.png "Zusatzdecoder bearbeiten")
+
+Hier ein Beispiel: Der Zusatzdecoder der im IC Steuerwagen wurde hier mit dem dre Lok "BR 103 Intercity" verknüpft. Nun erscheinen
+bei der entsprechenden Lok die Zusatzfunktionen wie
+
+* F0 Spitzensignal / Schlusslicht rot
+* F1 Fernlicht
+* F2 Innenbeleuchtung
+* F3 Führerstandsbeleuchtung
+* F4 Stromführende Kupplung
+
+unterhalb der Bedienungselemente für die Lok. Richtungswechsel der Lok haben auch direkte Auswirkungen auf die eingestellte Richtung
+für den Zusatzdecoder, z.B. den Wechsel der Stirnbeleuchtung von Rot auf Weiß und umgekehrt.
+
+Hier kann man die Funktion F0 des Zusatzdecoders mit F0 der Lok verknüpfen. Das heißt: Schalte ich nun F0 der Lok ein, wird auch
+automatisch die Funktion F0 des Zusatzdecoders entsprechend der Richtung der Lok aktiviert. Damit ist nun die Stirnbeleuchtung an beiden
+Enden des Zuges entprechend zueinander passend eingestellt.
 
 ![DCC-FM22 Zusatzdecoder Lok](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok-addon.png "Zusatzdecoder Lok")
 
 ### Weichen
 
+Unter dem Menüpunkt "Weichen" können die Weichen der Anlage konfiguriert werden. Diese bindet man dann später am besten in eine oder
+mehrere Fahrstraßen ein. Dann werden bei Aktivierung einer Fahrstraße direkt Gruppen von Weichen zeitlich versetzt geschaltet, um eine
+Fahrstraße zu bilden.
+
 ![DCC-FM22 Weichen](https://raw.githubusercontent.com/ukw100/FM22/main/images/weichen.png "Weichen")
+
+In dieser Ansicht kann man die Weichen auch manuell schalten, falls dies ausnahmsweise notwendig sein sollte. Dies geschieht automatisch
+beim Klick auf die entsprechende Schaltfläche wie "Gerade", "Abzweig" und "Abzweig2", wobei letztere nur für 3-Wege-Weichen angezeigt wird.
+
+Konfiguriert man eine neue oder bereits vorhandene Weiche, kann man folgende Einstellungen vornehmen:
+
+* Name
+* Adresse
+* Haken für 3-Wege-Weiche
 
 ### Fahrstraßen
 
+Fahrstraßen fassen bestimmte Gleise, die duch Weichen angesteuert werden, zu Gruppen zusammen.
+
+Hier ein Beispiel:
+
 ![DCC-FM22 Fahrstraßen](https://raw.githubusercontent.com/ukw100/FM22/main/images/fahrstrassen.png "Fahrstraßen")
+
+Diese Fahrstraße namens "Schattenbahnhof" besteht aus insgesamt 9 Gleisen. Jedes dieser Gleise kann einen Zug ("verknüpfte Lok")
+aufnehmen. Die Gleise kann man - bei verschiedenen Längen sinnvoll - fest mit den Loks verknüpfen oder auch frei wählbar lassen.
+
+In dieser Ansicht werden dargestellt:
+
+* Gleisname
+* Verknüpfte Lok
+* Aktivierung des Gleises durch RailCom-Detektor oder S88-Kontaktgleis
+* Auf dem Gleise erkannte Lok
+
+Welches Gleis der Fahrstraße gerade aktiv ist, wird durch die grüne Markierung in der Spalte ID angezeigt. In unserem Beispiel wurde
+das Gleis 1 ausgewählt, um die verknüpfte Lok einfahren zu lassen. Diese wurde auch erkannt, wie man weiter rechts sieht. Man kann
+ein bestimmtes Gleis auch selbst durch Klick auf die Schaltfläche "Setzen" selber aktivieren. Dann werden alle für dieses Gleis zuständigen
+Weichen automatisch so umgeschaltet, dass der Weg zum Gleis 1 im Schattenbahnhof aktiviert ist.
+
+Durch Klick auf "Neue Fahrstraße" wird eine neue Fahrstraße erzeugt. Dieser muss man zunächst einen Namen geben:
 
 ![DCC-FM22 Neue Fahrstraße](https://raw.githubusercontent.com/ukw100/FM22/main/images/neue-fahrstrasse.png "Neue Fahrstraße")
 
+Die Fahrstraßen lassen sich durch "Bearbeiten" auch nachträglich umbenennen oder durch Wahl einer neuen ID auch umsortieren:
+
 ![DCC-FM22 Fahrstraße bearbeiten 1](https://raw.githubusercontent.com/ukw100/FM22/main/images/fahrstrasse-bearbeiten-1.png "Fahrstraße bearbeiten 1")
 
+Nachdem man eine Fahrstraße angelegt hat, kann man nun im nächsten Schritt die Fahrstraße konfigurieren. Dabei definiert man die dazugehörenden
+Gleise. Im untenstehenden Beispiel wird gezeigt, wie das Gleis 9 der Fahrstraße eingerichtet wird.
+
+Also wird zunächste der Name festgelegt: "Gleis 9". Anschließende kann man - falls gewünscht - eine Lok mit dem Gleis verknüpfen. Damit
+bekommt die Lok ein "Heimatgleis", welches sie immer anfahren kann, wenn sie abgestellt werden soll:
+
 ![DCC-FM22 Fahrstraße bearbeiten 2](https://raw.githubusercontent.com/ukw100/FM22/main/images/fahrstrasse-bearbeiten-2.png "Fahrstraße bearbeiten 2")
+
+Als letztes müssen noch die Weichen so eingestellt werden, dass die Lok auch ihr Heimatgleis erreichen kann. Im Beispiel ist dafür hier
+notwendig:
+
+* Weiche 5 auf Abzweig
+* Weiche 3 auf Gerade
+* Weiche 7 auf Abzweig
+* Weiche 4 auf Gerade
+
+Wird die Lok nun im Laufe Ihrer Fahrt irgendwann in den Schattenbahnhof geleitet, werden sich anschließend die Weichen automatisch auf
+das Heimatgleis einstellen, die Lok ihre Fahrt verlangsamen und am Ende sicher auf dem Heimatgleis zum Stehen kommen. Wie hier das
+Zusammenspiel von RC-Detektoren, S88-Kontakten und Fahrstraßen funktioniert, wird weiter unten detailliert erklärt.
 
 ### Signale
 
