@@ -348,13 +348,48 @@ Zusammenspiel von RC-Detektoren, S88-Kontakten und Fahrstraßen funktioniert, wi
 
 ### Signale
 
+Signale sind nicht für die Steuerung notwendig. Sie dienen nur der optischen Anzeige. Die Steuerung selbst geschieht ausnahmslos über
+die FM22-Zentrale.
+
+Unter dem Menüpunkt "Signale" werden die Signale definiert. Hier werden nur Signale unterstützt, die lediglich 2 Zustände kennen. Unter
+dem Menüpunkt "LEDs" können bis zu 8 LEDs zu einem Signal zusammengefasst werden. Dazu kommen wir weiter unten.
+
+Im Beispiel unten wurden 4 Signale konfiguriert:
+
 ![DCC-FM22 Signale](https://raw.githubusercontent.com/ukw100/FM22/main/images/signale.png "Signale")
+
+Neben dem Namen und der Adresse wird hier auch der aktuelle Anzeigestatus der Signale angezeigt. im oberen Beispiel befinden sich zwei Signale
+im Zustand "Fahrt" und zwei im Zustand "Halt". Das wird auch durch die Farben Grün und Rot entsprechend angezeigt. Durch Klick auf
+die entsprechenden Schaltflächen kann man den Zustand der Signale manuell wechseln. Sinnvoller ist jedoch so ein Lichtsignalwechsel
+über eine Aktion eines RC-Detektors oder S88-Kontaktgleises.
+
+Neben der Neuanlage eines Signals kann man diese auch noch nachträglich bearbeiten. Hier lässt sich neben dem Namen und der Adresse auch noch
+die Anzeigereihenfolge über die ID bewerkstelligen:
 
 ![DCC-FM22 Signal bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/signal-bearbeiten.png "Signal bearbeiten")
 
 ### LEDs
 
+Unter dem Menüpunkt "LEDs" können Lichtsignale gesteuert werden, die mehr als 2 Zustände anzeigen können. Das sind entweder komplexere
+Lichtsignale oder es können auch Beleuchtungen von Gebäuden sein, zum Beispiel durch Verwendung eine FM22-RC-Detektors mit WS2812-LED-Ausgang.
+
+In der Regel werden für komplexe Lichtsignale sogenenannt "erweiterte Zubehördecoder" verwendet. Hier wird dann zum Decoder nicht
+nur zwei Zustände wie "Fahrt" und "Halt" übertragen, sondern ein ganzes Byte, welches insgresamt 256 Zustände annehmen kann bzw. bis zu 8 LEDs
+unabhängig voneinander steuert.
+
+Im untenstehenden Beispiel wurden zwei LED-Gruppen von je 8 LEDs angelegt, nämlich ein "Brückenstellwerk" und noch die Beleuchtung
+des Bahnhofs "Kümmelhausen":
+
 ![DCC-FM22 LEDs](https://raw.githubusercontent.com/ukw100/FM22/main/images/leds.png "LEDs")
+
+Hier können jeweils 8 LEDs (0-7) unabhängig voneinander manuell ein- und ausgeschaltet werden. Der aktuelle Zustand wird durch einen
+grünen Hintergrund dargestellt: Die entsprechenden LEDs sind damit eingestellt.
+
+Selbstverständlich lassen sich die Lichtzustände automatisiert als RailCom-Detektor- oder S88-Kontaktgleis-Aktionen automatisiert steuern.
+Dazu werden weiter unten entsprechende Beispiele aufgeführt.
+
+Bei der Bearbeitung der LED-Konfiguration können der Name und die Adresse der LED-Gruppe neu eingestellt werden. Ebenso kann man über
+die Angabe einer neuen ID die Anzeigereihenfolge ändern:
 
 ![DCC-FM22 LEDs bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/leds-bearbeiten.png "LEDs bearbeiten")
 
