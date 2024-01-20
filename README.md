@@ -47,6 +47,7 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
   * [POM Decoder-Info](#pom-decoder-info)
   * [POM Decoder-Adresse](#pom-decoder-adresse)
   * [POM Decoder-CV](#pom-decoder-cv)
+  * [POM Motorparameter](#pom-decoder-motorparameter)
   * [POM Funktionsmapping](#pom-funktionsmapping)
   * [POM Funktionsausgänge](#pom-funktionsausgänge)
 * [Zentrale](#zentrale)
@@ -461,14 +462,6 @@ Das Menü "Programmierung" bietet folgende Punkte:
 
 ![DCC-FM22 Decoder-CV](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-cv.png "Decoder-CV")
 
-### POM Funktionsmapping
-
-![DCC-FM22 Funktionsmapping](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-1.png "Funktionsmapping")
-
-![DCC-FM22 Funktionsmapping Lenz](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-lenz.png "Funktionsmapping Lenz")
-
-![DCC-FM22 Funktionsmapping ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-esu.png "Funktionsmapping ESU")
-
 ### POM Decoder-Motorparameter
 
 Unter dem Menüpunkt "Motorparameter" lassen sich die für die Ansteuerung eines Lokmotors zuständigen Einstellungen gezielt anpassen. Hier
@@ -496,6 +489,14 @@ präferierten Einstellung für einen Märklin® 5-Sterne-Hochleistungsmotor.
 
 Möchte man die Konfiguration ändern, kann man durch Betätigen einer der Schaltflächen "Speichern" eine vorkongurierte Einstellung übernehmen oder
 in der letzten Zeile die CV-Werte individuell anpassen.
+
+### POM Funktionsmapping
+
+![DCC-FM22 Funktionsmapping](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-1.png "Funktionsmapping")
+
+![DCC-FM22 Funktionsmapping Lenz](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-lenz.png "Funktionsmapping Lenz")
+
+![DCC-FM22 Funktionsmapping ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-esu.png "Funktionsmapping ESU")
 
 ### POM Funktionsmapping
 
