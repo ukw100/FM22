@@ -475,12 +475,12 @@ Nach der Auswahl des Menüpunktes "Motorparameter" muss zunächst der Hersteller
 Nachdem die Adresse eingegeben wurde, wird der Hersteller automatisch ermittelt und angezeigt. Im untenstehenden Beispiel ist der Hersteller
 "Electronic Solutions Ulm GmbH" oder auch kurz "ESU":
 
-![DCC-FM22 Motorparameter Hersteller](https://raw.githubusercontent.com/ukw100/FM22/main/images/images/motorparameter-hersteller.png "Motorparameter Decoderhersteller")
+![DCC-FM22 Motorparameter Hersteller](https://raw.githubusercontent.com/ukw100/FM22/main/images/motorparameter-hersteller.png "Motorparameter Decoderhersteller")
 
 Mit der Betätigung der Schaltfläche "Motorparameter lesen" werden nun alle für die Motorkonfiguration zuständigen Konfigurationsvariablen ("CVs")
 eingelesen und kompakt angezeigt:
 
-![DCC-FM22 Motorparameter bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/images/motorparameter-bearbeiten.png "Motorparameter bearbeiten")
+![DCC-FM22 Motorparameter bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/motorparameter-bearbeiten.png "Motorparameter bearbeiten")
 
 ESU selbst bietet für gängige Motor-/Lokhersteller bereits vorkonfigurierte Einstellungen an. Dabei werden alle vorkonfigurierte CV-Werte, die mit
 den tatsächlich ausgelesenen Werten übereinstimmen, in grün angezeigt. Stimmen sämtliche gelesene CV-Variablen mit einer Beispielkonfiguration
