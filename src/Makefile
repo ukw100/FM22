@@ -18,8 +18,8 @@
 #------------------------------------------------------------------------------------------------------------------------
 CXXFLAGS = -g -Wall -Werror -Wextra
 
-HTTP_OBJ = http.o http-loco.o http-addon.o http-sig.o http-switch.o http-led.o http-railroad.o http-s88.o http-rcl.o http-pom.o http-pgm.o http-pommap.o http-pomout.o http-pommot.o http-common.o
-HTTP_INC = http.h http-loco.h http-addon.h http-sig.h http-switch.h http-led.h http-railroad.h http-s88.h http-rcl.h http-pom.h http-pgm.h http-pommap.h http-pomout.h http-pommot.h http-common.h
+HTTP_OBJ = http.o http-loco.o http-addon.o http-sig.o http-switch.o http-led.o http-test.o http-railroad.o http-s88.o http-rcl.o http-pom.o http-pgm.o http-pommap.o http-pomout.o http-pommot.o http-common.o
+HTTP_INC = http.h http-loco.h http-addon.h http-sig.h http-switch.h http-led.h http-test.h http-railroad.h http-s88.h http-rcl.h http-pom.h http-pgm.h http-pommap.h http-pomout.h http-pommot.h http-common.h
 
 OBJ = $(HTTP_OBJ) millis.o msg.o userio.o serial.o func.o loco.o addon.o sig.o fileio.o switch.o led.o railroad.o s88.o rcl.o event.o dcc.o pom.o stm32.o base.o gpio.o debug.o fm22.o main.o
 INC = $(HTTP_INC) millis.h msg.h userio.h serial.h func.h loco.h addon.h sig.h fileio.h switch.h led.h railroad.h s88.h rcl.h event.h dcc.h pom.h stm32.h base.h gpio.h debug.h fm22.h version.h
@@ -40,6 +40,7 @@ http-addon.o: http-addon.cc $(INC)
 http-sig.o: http-sig.cc $(INC)
 http-switch.o: http-switch.cc $(INC)
 http-led.o: http-led.cc $(INC)
+http-test.o: http-test.cc $(INC)
 http-railroad.o: http-railroad.cc $(INC)
 http-s88.o: http-s88.cc $(INC)
 http-rcl.o: http-rcl.cc $(INC)

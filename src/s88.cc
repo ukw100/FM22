@@ -1033,11 +1033,25 @@ S88::schedule (void)
                     if (Millis::elapsed () - DCC::booster_is_on_time > 3000)
                     {
                         S88::contacts[coidx].execute_contact_actions (true);
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "contact=%u gets occupied\r\n", (uint16_t) coidx);
+                        Debug::printf (DEBUG_LEVEL_NORMAL, "contact=%u gets occupied\r\n", (uint16_t) coidx);
                     }
                     else
                     {
-                        Debug::printf (DEBUG_LEVEL_VERBOSE, "contact=%u gets occupied... ignored\r\n", (uint16_t) coidx);
+                        uint_fast16_t   rrgrridx    = S88::contacts[coidx].get_link_railroad ();
+                        uint_fast8_t    rrgidx      = rrgrridx >> 8;
+                        uint_fast8_t    rridx       = rrgrridx & 0xFF;
+                        Railroad *      rr          = &RailroadGroups::railroad_groups[rrgidx].railroads[rridx];
+                        uint_fast16_t   loco_idx    = rr->get_link_loco ();
+
+                        if (loco_idx != 0xFFFF)
+                        {
+                            Locos::locos[loco_idx].set_rrlocation (rrgrridx);
+                            Debug::printf (DEBUG_LEVEL_NORMAL, "contact=%u: setting loco #%u\r\n", (uint16_t) coidx, (uint16_t) loco_idx);
+                        }
+                        else
+                        {
+                            Debug::printf (DEBUG_LEVEL_NORMAL, "contact=%u gets occupied... ignored\r\n", (uint16_t) coidx);
+                        }
                     }
                 }
             }
