@@ -409,7 +409,27 @@ die Angabe einer neuen ID die Anzeigereihenfolge ändern:
 
 ![DCC-FM22 RailCom-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/rcl-bearbeiten.png "RailCom-Module")
 
-![DCC-FM22 RailCom-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/aktionen-rcl.png "RailCom-Module")
+Dabei sind folgende Aktionen wählbar:
+
+<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/aktionen-rcl.png">
+
+* Setze Geschwindigkeit: Einstellung der Geschwindigkeit.
+* Setze Mindestgeschwindigkeit: Ist die momentane Geschwindigkeit niedriger, wird sie auf den konfigurierten Wert erhöht.
+* Setze Höchstgeschwindigkeit: Ist die momentane Geschwindigkeit höher, wird sie auf den konfigurierten Wert erniedrigt.
+* Setze Richtung: Richtung wird auf vorwärts oder rückwärts gesetzt-
+* Schalte alle Funktionen aus: Es werden alle Lokfunktionen abgeschaltet.
+* Schalte Funktion aus: Es wird die ausgewählte Lokfunktion abgeschaltet.
+* Schalte Funktion ein: Es wird die ausgewählte Lokfunktion eingeschaltet.
+* Führe Lok-Macro aus: Es wird das audgwählte Macro ausgeführt.
+* Schalte alle Funktionen aus von Zusatzdecoder: hier werden alle Funktionen des mit der Lok verknüpften Zusatzdecoders abgeschaltet.
+* Schalte Funktion aus von Zusatzdecoder: Es wird die ausgewählte Funktion des Zusatzdcoders abgeschaltet.
+* Schalte Funktion ein von Zusatzdecoder: Es wird die ausgewählte Funktion des Zusatzdcoders eingeschaltet.
+* Schalte Gleis von Fahrstraße: Es wird das Gleis einer ausgewählten Fahrstraße geschaltet.
+* Schalte freies Gleis von Fahrstraße: Es wird das freie Gleis einer ausgewählten Fahrstraße geschaltet.
+* Warte auf freien S88-Kontakt, Halt: Es wird gewartet, bis der ausgewählte S88-Kontakt frei ist.
+* Setze Ziel: Das Ziel der Lok wird auf die gewählte Fahrstraße gesetzt.
+* Schalte LED: Es wird eine LED-Gruppe eines Signals oder Beleuchtungsmoduls geschaltet.
+* Schalte Weiche: Es wird eine Weiche geschaltet.
 
 ### Decodertest
 
@@ -487,7 +507,7 @@ den tatsächlich ausgelesenen Werten übereinstimmen, in grün angezeigt. Stimme
 ausnahmslos überein, wird der Motortyp zusätzlich grün hinterlegt. Im obigen Beispiel entspricht die ausgelesene Konfiguration der von der ESU
 präferierten Einstellung für einen Märklin® 5-Sterne-Hochleistungsmotor.
 
-Möchte man die Konfiguration ändern, kann man durch Betätigen einer der Schaltflächen "Speichern" eine vorkongurierte Einstellung übernehmen oder
+Möchte man die Konfiguration ändern, kann man durch Betätigen einer der Schaltflächen "Speichern" eine vorkonfigurierte Einstellung übernehmen oder
 in der letzten Zeile die CV-Werte individuell anpassen.
 
 ### POM Funktionsmapping
