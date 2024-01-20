@@ -40,9 +40,10 @@
 #include "http-common.h"
 #include "http-loco.h"
 #include "http-addon.h"
-#include "http-led.h"
 #include "http-switch.h"
 #include "http-sig.h"
+#include "http-led.h"
+#include "http-test.h"
 #include "http-railroad.h"
 #include "http-s88.h"
 #include "http-rcl.h"
@@ -1229,14 +1230,13 @@ static PAGEENTRY    pageentry[] =
     { "/switch",    HTTP_Switch::handle_switch          },
     { "/rr",        HTTP_Railroad::handle_rr            },
     { "/rredit",    HTTP_Railroad::handle_rr_edit       },
-    { "/swtest",    HTTP_Switch::handle_switch_test     },
     { "/sig",       HTTP_Signal::handle_sig             },
-    { "/sigtest",   HTTP_Signal::handle_sig_test        },
     { "/s88",       HTTP_S88::handle_s88,               },
     { "/s88edit",   HTTP_S88::handle_s88_edit           },
     { "/lmedit",    HTTP_Loco::handle_loco_macro_edit   },
     { "/rcl",       HTTP_RCL::handle_rcl                },
     { "/rcledit",   HTTP_RCL::handle_rcl_edit           },
+    { "/test",      HTTP_Test::handle_test              },
     { "/pgminfo",   HTTP_PGM::handle_pgminfo            },
     { "/pgmaddr",   HTTP_PGM::handle_pgmaddr            },
     { "/pgmcv",     HTTP_PGM::handle_pgmcv              },

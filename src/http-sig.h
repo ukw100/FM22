@@ -26,7 +26,6 @@ class HTTP_Signal
 {
     public:
         static void     handle_sig (void);
-        static void     handle_sig_test (void);
         static void     action_setsig (void);
         static void     action_sig (void);
     private:

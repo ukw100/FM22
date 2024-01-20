@@ -275,46 +275,6 @@ HTTP_Signal::handle_sig (void)
     HTTP_Common::html_trailer ();
 }
 
-/*----------------------------------------------------------------------------------------------------------------------------------------
- * handle_sig_test ()
- *----------------------------------------------------------------------------------------------------------------------------------------
- */
-void
-HTTP_Signal::handle_sig_test (void)
-{
-    String          title   = "Signaltest";
-    String          url     = "/sigtest";
-    const char *    action  = HTTP::parameter ("action");
-    const char *    saddr   = HTTP::parameter ("addr");
-    uint_fast16_t   addr;
-
-    HTTP_Common::html_header (title, title, url, true);
-    HTTP::response += (String) "<div style='margin-left:20px;'>\r\n";
-    HTTP_Common::add_action_handler ("head", "", 200, true);
-
-    if (strcmp (action, "sig") == 0)
-    {
-        uint_fast16_t   nsig = HTTP::parameter_number ("sig");
-
-        addr = atoi (saddr);
-        DCC::base_switch_set (addr, nsig);
-    }
-
-    HTTP::response += (String)
-        "<form method='get' action='" + url + "'>\r\n"
-        "<table style='border:1px lightgray solid;'>\r\n"
-        "  <tr><td>Adresse:</td><td><input type=text name='addr' maxlength=4 value='" + saddr + "'></td></tr>\r\n"
-        "  <tr><td>Stellung:</td><td>\r\n"
-        "    <input type='radio' name='sig' id='go' value='1' checked><label for='go'>Fahrt</label>\r\n"
-        "    <input type='radio' name='sig' id='halt' value='0'><label for='halt'>Halt</label>\r\n"
-        "  </td></tr>\r\n"
-        "  <tr><td colspan='2' align='right'><button type='submit' name='action' value='sig'>Schalten</button></td></tr>\r\n"
-        "</table>\r\n"
-        "</form>\r\n"
-        "</div>\r\n";
-    HTTP_Common::html_trailer ();
-}
-
 void
 HTTP_Signal::action_setsig (void)
 {

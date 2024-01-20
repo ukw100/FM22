@@ -317,47 +317,6 @@ HTTP_Switch::handle_switch (void)
     HTTP_Common::html_trailer ();
 }
 
-/*----------------------------------------------------------------------------------------------------------------------------------------
- * handle_switch_test ()
- *----------------------------------------------------------------------------------------------------------------------------------------
- */
-void
-HTTP_Switch::handle_switch_test (void)
-{
-    String          title   = "Weichentest";
-    String          url     = "/swtest";
-    const char *    action  = HTTP::parameter ("action");
-    const char *    saddr   = HTTP::parameter ("addr");
-    uint_fast16_t   addr;
-
-    HTTP_Common::html_header (title, title, url, true);
-    HTTP::response += (String) "<div style='margin-left:20px;'>\r\n";
-    HTTP_Common::add_action_handler ("head", "", 200, true);
-
-    if (strcmp (action, "switch") == 0)
-    {
-        uint_fast16_t   nswitch = HTTP::parameter_number ("switch");
-
-        addr = atoi (saddr);
-        DCC::base_switch_set (addr, nswitch);
-    }
-
-    HTTP::response += (String)
-        "<form method='get' action='" + url + "'>\r\n"
-        "<table style='border:1px lightgray solid;'>\r\n"
-        "  <tr><td>Adresse:</td><td><input type=text name='addr' maxlength=4 value='" + saddr + "'></td></tr>\r\n"
-        "  <tr><td>Stellung:</td><td>\r\n"
-        "    <input type='radio' name='switch' id='gerade' value='1' checked><label for='gerade'>Gerade</label>\r\n"
-        "    <input type='radio' name='switch' id='abzweig' value='0'><label for='abzweig'>Abzweig</label>\r\n"
-        "    <input type='radio' name='switch' id='abzweig2' value='2'><label for='abzweig2'>Abzweig2</label>\r\n"
-        "  </td></tr>\r\n"
-        "  <tr><td colspan='2' align='right'><button type='submit' name='action' value='switch'>Schalten</button></td></tr>\r\n"
-        "</table>\r\n"
-        "</form>\r\n"
-        "</div>\r\n";
-    HTTP_Common::html_trailer ();
-}
-
 void
 HTTP_Switch::action_setsw (void)
 {

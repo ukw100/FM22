@@ -544,13 +544,12 @@ HTTP_Common::html_header (String browsertitle, String title, String url, bool us
         "      <option style='color:" + list_color + "' value='/loco'>Lokliste</option>\r\n"
         "      <option style='color:" + addon_color + "' value='/addon'>Zusatzdecoder</option>\r\n"
         "      <option style='color:" + switch_color + "' value='/switch'>Weichen</option>\r\n"
-        "      <option style='color:" + switch_test_color + "' value='/swtest'>Weichentest</option>\r\n"
         "      <option style='color:" + rr_color + "' value='/rr'>Fahrstra&szlig;en</option>\r\n"
         "      <option style='color:" + sig_color + "' value='/sig'>Signale</option>\r\n"
-        "      <option style='color:" + sig_test_color + "' value='/sigtest'>Signaltest</option>\r\n"
         "      <option style='color:" + led_color + "' value='/led'>LEDs</option>\r\n"
         "      <option style='color:" + s88_color + "' value='/s88'>S88</option>\r\n"
         "      <option style='color:" + rcl_color + "' value='/rcl'>RC-Detektoren</option>\r\n"
+        "      <option style='color:" + switch_test_color + "' value='/test'>Decodertest</option>\r\n"
         "  </select>\r\n"
         "</td>\r\n";
 

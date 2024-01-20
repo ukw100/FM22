@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------------------------------------------------
- * http-led.h - HTTP led routines
+ * http-test.h - HTTP test routines
  *------------------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022-2024 Frank Meyer - frank(at)uclock.de
+ * Copyright (c) 2024 Frank Meyer - frank(at)uclock.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,17 +17,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *------------------------------------------------------------------------------------------------------------------------
  */
-#ifndef HTTP_LED_H
-#define HTTP_LED_H
+#ifndef HTTP_TEST_H
+#define HTTP_TEST_H
 
 #include <stdint.h>
 
-class HTTP_Led
+class HTTP_Test
 {
     public:
-        static void     handle_led (void);
-        static void     action_setled (void);
-        static void     action_led (void);
+        static void     handle_test (void);
     private:
 };
 

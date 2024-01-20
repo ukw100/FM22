@@ -26,7 +26,6 @@ class HTTP_Switch
 {
     public:
         static void     handle_switch (void);
-        static void     handle_switch_test (void);
         static void     action_setsw (void);
         static void     action_switch (void);
     private:
