@@ -430,6 +430,7 @@ Dabei sind folgende Aktionen wählbar:
 * Setze Ziel: Das Ziel der Lok wird auf die gewählte Fahrstraße gesetzt.
 * Schalte LED: Es wird eine LED-Gruppe eines Signals oder Beleuchtungsmoduls geschaltet.
 * Schalte Weiche: Es wird eine Weiche geschaltet.
+* Schalte Signal: Es wird ein Signal geschaltet.
 
 ### Decodertest
 
