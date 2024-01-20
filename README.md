@@ -32,10 +32,12 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
   * [Lokliste](#lokliste)
   * [Zusatzdecoder](#zusatzdecoder)
   * [Weichen](#weichen)
+  * [Signale](#signale)
+  * [LEDs](#leds)
   * [Fahrstraßen](#fahrstraßen)
-  * [Weichentest](#weichentest)
   * [S88-Module](#s88-module)
   * [RailCom®-Module](#railcom-module)
+  * [Decodertest](#decodertest)
 * [Programmierung](#programmierung)
 * [Programmierung über Programmiergleis](#programmierung-über-programmiergleis)
   * [PGM Decoder-Info](#pgm-decoder-info)
@@ -108,10 +110,12 @@ Das Menü "Steuerung" bietet folgende Punkte:
 * [Lokliste](#lokliste)
 * [Zusatzdecoder](#zusatzdecoder)
 * [Weichen](#weichen)
+* [Signale](#signale)
+* [LEDs](#leds)
 * [Fahrstraßen](#fahrstraßen)
-* [Weichentest](#weichentest)
 * [S88](#s88-module)
 * [RC-Detektoren](#railcom-module)
+* [Decodertest](#decodertest)
 
 ### Lokliste
 
@@ -229,9 +233,17 @@ die Lokliste also neu sortieren.
 
 ![DCC-FM22 Fahrstraße bearbeiten 2](https://raw.githubusercontent.com/ukw100/FM22/main/images/fahrstrasse-bearbeiten-2.png "Fahrstraße bearbeiten 2")
 
-### Weichentest
+### Signale
 
-![DCC-FM22 Weichentest](https://raw.githubusercontent.com/ukw100/FM22/main/images/weichentest.png "Weichentest")
+![DCC-FM22 Signale](https://raw.githubusercontent.com/ukw100/FM22/main/images/signale.png "Signale")
+
+![DCC-FM22 Signal bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/signal-bearbeiten.png "Signal bearbeiten")
+
+### LEDs
+
+![DCC-FM22 LEDs](https://raw.githubusercontent.com/ukw100/FM22/main/images/leds.png "LEDs")
+
+![DCC-FM22 LEDs bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/leds-bearbeiten.png "LEDs bearbeiten")
 
 ### S88-Module
 
@@ -248,6 +260,10 @@ die Lokliste also neu sortieren.
 ![DCC-FM22 RailCom-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/rcl-bearbeiten.png "RailCom-Module")
 
 ![DCC-FM22 RailCom-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/aktionen-rcl.png "RailCom-Module")
+
+### Decodertest
+
+![DCC-FM22 Decodertest](https://raw.githubusercontent.com/ukw100/FM22/main/images/decodertest.png "Decodertest")
 
 ## Programmierung
 
