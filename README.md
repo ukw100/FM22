@@ -401,7 +401,27 @@ die Angabe einer neuen ID die Anzeigereihenfolge ändern:
 
 ![DCC-FM22 S88-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/s88-edit.png "S88-Module")
 
-![DCC-FM22 S88-Module](https://raw.githubusercontent.com/ukw100/FM22/main/images/aktionen-s88.png "S88-Module")
+Dabei sind folgende Aktionen wählbar:
+
+<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/aktionen-s88.png">
+
+* Setze Geschwindigkeit: Einstellung der Geschwindigkeit.
+* Setze Mindestgeschwindigkeit: Ist die momentane Geschwindigkeit niedriger, wird sie auf den konfigurierten Wert erhöht.
+* Setze Höchstgeschwindigkeit: Ist die momentane Geschwindigkeit höher, wird sie auf den konfigurierten Wert erniedrigt.
+* Setze Richtung: Richtung wird auf vorwärts oder rückwärts gesetzt-
+* Schalte alle Funktionen aus: Es werden alle Lokfunktionen abgeschaltet.
+* Schalte Funktion aus: Es wird die ausgewählte Lokfunktion abgeschaltet.
+* Schalte Funktion ein: Es wird die ausgewählte Lokfunktion eingeschaltet.
+* Führe Lok-Macro aus: Es wird das audgwählte Macro ausgeführt.
+* Schalte alle Funktionen aus von Zusatzdecoder: hier werden alle Funktionen des mit der Lok verknüpften Zusatzdecoders abgeschaltet.
+* Schalte Funktion aus von Zusatzdecoder: Es wird die ausgewählte Funktion des Zusatzdcoders abgeschaltet.
+* Schalte Funktion ein von Zusatzdecoder: Es wird die ausgewählte Funktion des Zusatzdcoders eingeschaltet.
+* Schalte Gleis von Fahrstraße: Es wird das Gleis einer ausgewählten Fahrstraße geschaltet.
+* Schalte freies Gleis von Fahrstraße: Es wird das freie Gleis einer ausgewählten Fahrstraße geschaltet.
+* Setze Ziel: Das Ziel der Lok wird auf die gewählte Fahrstraße gesetzt.
+* Schalte LED: Es wird eine LED-Gruppe eines Signals oder Beleuchtungsmoduls geschaltet.
+* Schalte Weiche: Es wird eine Weiche geschaltet.
+* Schalte Signal: Es wird ein Signal geschaltet.
 
 ### RailCom®-Module
 
@@ -538,7 +558,10 @@ in der letzten Zeile die CV-Werte individuell anpassen.
 
 ![DCC-FM22 Funktionsausgänge ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-4.png "Funktionsausgänge ESU")
 
-![DCC-FM22 Funktionsausgänge Modi](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-5.png "Funktionsausgänge Modi")
+<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/pom-ausgaenge-5.png>
+
+Einige der umfangreichen Modi sind rechts aufgelistet. Für jeden der möglichen Ausgänge können sie mit einem Klick aus
+der Liste ausgewählt werden.
 
 ## Zentrale
 
