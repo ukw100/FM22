@@ -163,7 +163,7 @@ Durch Klick auf die Lokbezeichnung gelangt man in die Loksteuerung der gewünsch
 ### Loksteuerung
 
 Auf dieser Seite kann die ausgewählte Lok gesteuert werden. Dies ist über Smartphone, Tablett, direkt am Pi oder auch mit einem PC möglich.
-So können direkt mehrere Personen verschiedene Loks gleichzeitig steuern.
+So können mehrere Personen verschiedene Loks gleichzeitig steuern.
 
 Hier sieht man:
 
@@ -185,7 +185,7 @@ Schieberegler kann die Geschwindigkeit, mit den Pfeilen darunter kann die Fahrtr
 stellt die Geschwindigkeit auf 0, ein Klick auf den schwarzen Kreis daneben führt einen Notstopp aus, d.h. die Lok bleibt dann sofort stehen - ohne
 Berücksichtigung irgendwelcher eingesteller Bremsverzögerungen.
 
-Insgesamt können 8 Lok-Macros definiert und ausgelöst werden, siehe auch [Lok-Macros](#lok-macros).
+Insgesamt können 8 Lok-Macros (MF, MH, M3 - M8) definiert und ausgelöst werden, siehe auch [Lok-Macros](#lok-macros).
 
 ### Neue Lok
 
@@ -408,7 +408,7 @@ Dabei sind folgende Aktionen wählbar:
 * Setze Geschwindigkeit: Einstellung der Geschwindigkeit.
 * Setze Mindestgeschwindigkeit: Ist die momentane Geschwindigkeit niedriger, wird sie auf den konfigurierten Wert erhöht.
 * Setze Höchstgeschwindigkeit: Ist die momentane Geschwindigkeit höher, wird sie auf den konfigurierten Wert erniedrigt.
-* Setze Richtung: Richtung wird auf vorwärts oder rückwärts gesetzt-
+* Setze Richtung: Richtung wird auf vorwärts oder rückwärts gesetzt.
 * Schalte alle Funktionen aus: Es werden alle Lokfunktionen abgeschaltet.
 * Schalte Funktion aus: Es wird die ausgewählte Lokfunktion abgeschaltet.
 * Schalte Funktion ein: Es wird die ausgewählte Lokfunktion eingeschaltet.
@@ -454,7 +454,17 @@ Dabei sind folgende Aktionen wählbar:
 
 ### Decodertest
 
+Unter dem Menüpunkt "Decodertest" können Zubehördecoder einfach und schnell getestet werden. Hier gibt man einfach eine Adresse
+ein, wählt die gewünschte Funktion und betätigt die Schaltfläche "Schalten":
+
 ![DCC-FM22 Decodertest](https://raw.githubusercontent.com/ukw100/FM22/main/images/decodertest.png "Decodertest")
+
+Ausgewählt werden kann hier unter
+
+* Weichen-Decoder für Weichen
+* Signal-Decoder für einfache Signale wie Fahrt/Halt
+* LED-Decoder für komplexe Signale oder Beleuchtungen
+
 
 ## Programmierung
 
@@ -476,6 +486,25 @@ Das Menü "Programmierung" bietet folgende Punkte:
 
 ## Programmierung über Programmiergleis
 
+Am Programmiergleis darf lediglich ein Decoder angeschlossen werden, denn hier werden die Programmierbefehle an den Decoder ohne
+die Übertragung einer Decoder-Adresse verwendet. Diese Methode hat Vorteile, aber auch Nachteile:
+
+Vorteile:
+
+* Programmierung ohne Wissen einer Decoderdadresse
+
+Nachteile:
+
+* Es darf nur ein Decoder über das Programmiergleis angeschlossen sein
+* Programmierung ist sehr langsam
+
+Heutzutage ist die Programmierung über das Programmiergleis nur noch für eine einzige Funktion gedacht, nämlich das Übertragen bzw. Einstellen
+einer neuen Decoder-Adresse. Alle anderen Programmierungen lassen sich mit modernen Decodern auf dem Hauptgleis erledigen. Damit muss
+die Lok also gar nicht mehr von der Anlage genommen werden. Die heutigen Decoder erlauben auch sämtliche Programmierfunktionen über
+das Hauptgleis - mit einer Ausnahme: Meist kann die Adresse ausschließlich über das Programmiergleis eingestellt werden.
+
+Der Grund dafür ist einfach: Auch nach Ändern der Decoderadresse verliert man niemals die Kontrolle über den Decoder, denn hier
+können sämtliche Konfigurationsvariablen - auch die Adresse - ohne Kenntnis der Adresse durchgeführt werden.
 
 ### PGM Decoder-Info
 
