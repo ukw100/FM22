@@ -614,7 +614,7 @@ in der letzten Zeile die CV-Werte individuell anpassen.
 
 ![DCC-FM22 Funktionsausgänge ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-4.png "Funktionsausgänge ESU")
 
-<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/pom-ausgaenge-5.png>
+<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/pom-ausgaenge-5.png">
 
 Einige der umfangreichen Modi sind rechts aufgelistet. Für jeden der möglichen Ausgänge können sie mit einem Klick aus
 der Liste ausgewählt werden.
