@@ -655,7 +655,12 @@ Adresse über POM. Diese kann dann nur über die Programmiergleis-Programmierung
 
 ### POM Decoder-CV
 
+Unter diesem Menüpunkt können einzelne CV-Werte geändert werden. Zunächst sollte man den Inhalt einer Konfigurationsvariablen auslesen:
+
 ![DCC-FM22 Decoder-CV](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-cv.png "Decoder-CV")
+
+Anschließend kann man den Wert ändern. Die Eingabe des neuen Wertes kann dezimal oder binär erfolgen. Durch Betätigung der Schaltfläche "CV Speichern" werden die neuen Daten in
+der Konfigurationsvariablen gespeichert.
 
 ### POM Decoder-Motorparameter
 
