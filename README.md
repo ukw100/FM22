@@ -126,7 +126,7 @@ Die Lokliste ist wohl die wichtigste Anzeige während des Betriebs. Hier wird an
  * Online-Status (grün=online, sonst offline)
  * Bezeichnung der Lok
  * Aktueller Aufenthaltsort der Lok
- * Buttons "MF" und "MH" zum Ausführen von Makros (hier "Fahrt" und "Halt"
+ * Buttons "MF" und "MH" zum Ausführen von Makros (hier "Fahrt" und "Halt")
  * Adresse der Lok
  * RailCom Channel 2 Übertragungsqualität
  * Ein Button zum Bearbeiten der Eigenschaften - nur sichtbar im Bearbeitungsmodus
@@ -149,11 +149,12 @@ Durch die Buttons "MF" und "MH" können automatisiert Abläufe (Macros) gestarte
 * Nach 18 Sekunden Fahrtaufnahme durch Erhöhung der Geschwindigkeit über eine Rampendefinition.
 * Nach 24 Sekunden Lokpfiff
 
-Diese war nur ein Beispiel. Insgesamt können bis zu 8 Macros pro Lok definiert werden. Weitere Informationen siehe [Lok-Macros](#lok-macros).
+Diese war nur ein Beispiel. Insgesamt können bis zu 8 Macros mit je 16 Aktionen pro Lok definiert werden. Weitere Informationen siehe [Lok-Macros](#lok-macros).
 
 Die Spalte "Adresse" gibt die Lokadresse aus. Die Spalte "RC2" zeigt die Übertragungsqualität von RailCom-Rückmeldungen während des Betriebs.
 Solange keine Störungen auf der Anlage sind, sollten hier Werte zwischen 98% und 100% ausgegeben werden. Bei 100% wurde jeder DCC-Befehl korrekt
-beantwortet und auch vollständig von der Zentrale "verstanden".
+vom Decoder beantwortet und auch vollständig von der Zentrale "verstanden". Nach den Spalten ID, Name und Adresse kann sortiert werden. Die Sortierung geschieht
+durch Klick auf die jeweilige Spalte. Die aktive Spaltenbezeichnung wird dann in grün gezeigt.
 
 Der Button "Bearbeiten" erscheint nur im Bearbeitungsmodus. Hier können dann die Grundeinstellungen der Lok - wie zum Beispiel die Adresse -
 geändert werden.
@@ -206,6 +207,29 @@ Klickt man in der Lokliste auf den Button "Bearbeiten", kann man die Grundeinste
 
 Durch Einstellung der ID kann man auch den gewünschten Lokeintrag in der Liste von oben nach unten und umgekehrt "wandern" lassen,
 die Lokliste also neu sortieren. Sonst gelten dieselben Einstellungen wie bei einer neuen Lok.
+
+### Lok-Funktionen
+
+Die Lok-Funktionen müssen einmal für jeden Lok-Decoder eingestellt werden. Dies geht relativ einfach und zügig, denn die meisten Lok-Funktionen sind
+bereits vordefiniert und müssen lediglich den Funktionstasten F0 bis F31 zugewiesen werden.
+
+Dies geschieht durch Klick auf die Schaltfläche "FX" im unteren Bereich. Dann öffnet sich unterhalb der Schaltfläche folgender Dialog:
+
+![DCC-FM22 Lok-Funktionen](https://raw.githubusercontent.com/ukw100/FM22/main/images/lokfunktionen.png "Lok-Funktionen")
+
+Hier sind nun folgende Einstellungen nötig:
+
+* Funktionstastennummer F0 - F31
+* Name der Funktion - auswählbar aus Liste
+* Puls: Ja/nein
+* Sound: Ja/nein
+
+Der Funktionsname kann aus einer Liste von ca. 250 Bezeichnungen gewählt werden. Mit der Einstellung "Puls" kann man wählen, ob ein Druck auf die Funktionstaste
+lediglich einen kurzen Impuls auslösen soll oder ein Dauersignal. Der kurze Impuls ist sinnvoll bei Geräuschen, die nicht fortwährend abgespielt werden soll, wie
+zuk Beispiel ein Lok-Pfiff.
+
+Die Einstellung "Sound" dient lediglich der Information, ob die gewählte Funktion einen Sound abspielt oder nicht.
+
 
 ### Lok-Macros
 
