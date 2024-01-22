@@ -710,15 +710,16 @@ entsprechende Tabellenzelle, um eine Verknüpfung herzustellen oder wieder zu l�
 Die geänderte Konfiguration wird dann im Decoder geändert.
 
 Das Funktionsmapping von ESU ist hier wesentlich umfangreicher angelegt. Hier erkauft man sich die erweiterte Funktionalität aber auch mit einer erheblich höheren Komplexität.
-Während hier die Programmierung über einzelne CVs zu einem aussichtslosen Unterfangen wird, kann das ESU-Funktionsmapping mit der FM22-Zentrale mit ein paar Mausklicks
-erledigt werden.
+Während hier die Programmierung über einzelne CVs zu einem aussichtslosen Unterfangen werden kann, reichen bei der FM22-Zentrale lediglich ein paar Mausklicks, um das
+ESU-Funktionsmapping anzupassen und zu ändern.
 
 Dabei muss man zunächst das Prinzip verstehen:
 
-Während andere Hersteller eine direkte Verknüpfung einer Funktionstaste zu einem Ausgang vornehmen (siehe obiges Beispiel "Lenz"), gibt es hier einfach nur sogenannte
-"Konfigurationszeilen". Diese bestehen aus bis zu 72 Zeilen bestehen. Standardmäßig sind lediglich 16 Zeilen mit einer Konfiguration belegt, deshalb kann man hier
-auswähle, ob man die ersten 16, 32 oder 72 Zeilen einlesen möchte. Der Grund für diese Abfrage ist lediglich die für die Ermittlung der Werte erforderliche Zeitdauer. Das
-Einlesen von 16 Zeilen dauert ca. 3-4 Sekunden, das Einlesen von 72 Zeilen dauert dann entsprechend länger - auch wenn diese Zeilen eventuell nicht genutzt werden.
+Während sonstige Hersteller eine direkte Verknüpfung einer Funktionstaste zu einem Ausgang vornehmen (siehe obiges Beispiel "Lenz"), gibt es hier einfach nur sogenannte
+"Konfigurationszeilen". Diese bestehen aus bis zu 72 Zeilen. Standardmäßig sind lediglich 16 Zeilen mit einer Konfiguration belegt, deshalb man kann hier
+auswählen, ob man die ersten 16, 32 oder 72 Zeilen einlesen möchte. Der Grund für diese Abfrage ist lediglich die für die Ermittlung der Werte erforderliche Zeitdauer. Das
+Einlesen von 16 Zeilen dauert ca. 3-4 Sekunden, das Einlesen von 72 Zeilen dauert dann entsprechend länger - auch wenn diese Zeilen eventuell nicht genutzt werden. Dabei
+werden ca. 100 Konfigurationsvariablen pro Sekunde gelesen.
 
 Das Prinzip ist nun, dass man Bedingungen mit Ausgängen oder einer Logik verknüpft. Das kann in einer beliebigen Konfigurationszeile erfolgen, die nicht unbedingt an
 eine bestimmte Funktionstaste verknüpft sein muss. Im Gegenteil: Ein Ausgang kann auch mit mehreren Funktionstasten verknüpft werden, die dann alle gleichzeitig
@@ -728,7 +729,7 @@ Das Standard-Funktionsmapping von ESU sieht folgendermaßen aus:
 
 ![DCC-FM22 Funktionsmapping ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-esu.png "Funktionsmapping ESU")
 
-Rote Kästchen bedeuten hier, dass die Bedingung (Funktionstaste) ausgeschaltet ist, grüne Kästchen bedeuten eine eingeschaltete Bedingung.
+Rote Kästchen bedeuten hier, dass die Bedingung (Fahrt, Richtung oder Funktionstaste) ausgeschaltet ist, grüne Kästchen bedeuten eine eingeschaltete Bedingung.
 
 Dann erhalten die Konfigurationszeilen folgende Bedeutungen:
 
@@ -744,32 +745,48 @@ Dann erhalten die Konfigurationszeilen folgende Bedeutungen:
 
 Nun kann man durch Klick auf eine Tabellenzelle die Bedeutung einer Verknüpfung ändern.
 
-Der Klick auf eine Zelle in den Spalten "Bedingung" löst folgendes aus:
+Der Klick auf eine Zelle in den Spalten "Bedingungen" löst folgendes aus:
 
 * Erster Klick: Bedingung wird grün, d.h. der oder die Ausgänge werden gesetzt, wenn die Bedingung zutrifft.
 * Zweiter Klick: Bedingung wird rot d.h. der oder die Ausgänge werden gesetzt, wenn die Bedingung NICHT zutrifft.
-* Dritter Klick: Bedingung wird farblos, d.h. die Verknüpfung wird gelöscht.
+* Dritter Klick: Bedingung wird farblos, d.h. die Bedingung wird hier ignoriert.
 
 Der Klick auf eine Zelle in den Spalten "Ausgang" oder "Logik" löst folgendes aus:
 
-* Erster Klick: Ausgang wird grün, d.h. Ausgang/Logik wird für die gegebenen Bedingungen gesetzt.
-* Zweiter Klick: Bedingung wird farblos, d.h. die Verknüpfung zur Bedingung wird gelöscht.
+* Erster Klick: Zelle wird grün, d.h. der entsprechende Ausgang/Logik wird für die gegebenen Bedingungen gesetzt.
+* Zweiter Klick: Zelle wird farblos, d.h. die Verknüpfung zur Bedingung wird gelöscht.
 
 Hat man alle gewünschten Konfigurationen vorgenommen, dann kann man diese mit dem Klick auf die Schaltfläche "Änderungen speichern" vornehmen.
 
 ### POM Funktionsausgänge
 
+Manche Hersteller ermöglichen es, die Funktionsausgänge des Decoders in ihrer Eigenschaft zu ändern. Das reicht vom langsamen Hochdimmen beim Einschalten über Blinken bis zu
+umfangreichen Simulationen wie "Feuerbüchse".
+
+Um solche Funktionsausgänge zu konfigurieren, ist zunächst die Eingabe der Decoderadresse nötig.
+
 ![DCC-FM22 Funktionsausgänge Adresse](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-1.png "Funktionsausgänge Adresse")
+
+Anhand der Adresse wird dann im nächsten Schritt der Decoderhersteller ermittelt:
 
 ![DCC-FM22 Funktionsausgänge Hersteller](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-2.png "Funktionsausgänge Hersteller")
 
+Anschließen lässt sich dann die Konfiguration der Funktionsausgänge auslesen:
+
 ![DCC-FM22 Funktionsausgänge einlesen](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-3.png "Funktionsausgänge einlesen")
+
+Diese werden dann in einer Tabelle angezeigt. Hier ein Beispiel eines ESU-Decoders:
 
 ![DCC-FM22 Funktionsausgänge ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-4.png "Funktionsausgänge ESU")
 
+Man kann nun den sogenannten "Mode" des Ausgangs über eine Dropdown-Liste anpassen. Ebenso kann man eine Einschalt- und Ausschaltverzögerung konfigurieren.
+Die automatische Abschaltung sorgt dafür, dass der Ausgang nach einer wählbaren Dauer automatisch deaktiviert wird. Das ist unter anderem für die Steuerung
+von Kupplungen notwendig und daher wichtig. Jeden Ausgang kann man noch mit einer Pulsweitenmodulation (PWM) belegen, die als Helligkeit für LEDs genutzt werden
+kann. Dabei bedeutet der Wert "0" "LED dunkel", der Wert "31" "maximale Helligkeit", alles andere dazwischen entsprechende Zwischenwerte.
+
 <img align="right" src="https://github.com/ukw100/FM22/blob/main/images/pom-ausgaenge-5.png">
 
-Einige der umfangreichen Modi sind rechts aufgelistet. Für jeden der möglichen Ausgänge können mit einem Klick aus der Liste ausgewählt werden.
+Einige der möglichen Modes sind rechts aufgelistet. Für jeden der möglichen Ausgänge können mit einem Klick aus der Liste ausgewählt werden.
 
 ## Zentrale
 
