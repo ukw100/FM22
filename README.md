@@ -69,38 +69,38 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 
 BOM (nicht ganz aktuell, wird mit Veröffentlichung des Schaltplans aktualisiert):
 
-|Pos|Anzahl|Name|Wert|Reichelt Bestellnr.|Bemerkung|
-|---|------|----|----|-------------------|---------|
-|1|5|C1, C3, C4, C5, C7|100nF|X7R-2,5 100N KOM||
-|2|1|C2|220µF/35V|RAD FR 220/50 (RM 5,08)|alternativ RAD FR 220/35|
-|3|1|C6|100µF/16V|RAD FR 100/16||
-|4|1|D1|1N4007|1N 4007||
-|5|2|D2, D3|SB320|SB 320||
-|7|1|IC2|MAX485CPA|MAX 485 CPA||
-|8|1|IC3|78L05|µA 78L05||
-|9|1|IC4|6N137|6N 137||
-|10|1|IC5|LM393N|LM 393 DIP||
-|11|1|IC6|PC817|LTV 817||
-|12|2|K1, K2|RJ45_8POLIG|MEBP 8-8S||
-|13|1|K3|Stiftleiste_1x06_W_2,54|SL 1X40W 2,54||
-|14|1|K4|Stiftleiste_1x06_G_2,54|SL 1X40G 2,54||
-|15|1|K6|KLEMME2POL|AKL 101-02||
-|16|1|K7|KLEMME4POL|AKL 101-04||
-|17|3|R1, R3, R11|22,1K|METALL 22,1K||
-|18|1|R2|4,87K|METALL 4,87K||
-|19|1|R4|4,64K|METALL 4,64K||
-|20|1|R5|1,8 2W|2W METALL 1,8||
-|21|2|R6, R7|390|METALL 390||
-|22|1|R8|560|METALL 560||
-|23|2|R9, R16|10K|METALL 10,0K||
-|24|1|R10|4,75K|METALL 4,75K||
-|25|1|R12|120|METALL 120||
-|26|3|R13, R17, R18|1K|METALL 1,00K||
-|27|1|R14|33 2W|2W METALL 33||
-|28|1|R15|5,1K|METALL 5,10K||
-|29|1|RPI Header|40pol|RPI HEADER 40||
-|30|1|RPI Abstandsbolzen Set|20mm|RPI MOUNTINGKIT2||
-|31|4|IC-Sockel 8-polig||GS 8P|Einen Sockel für PC817 halbieren|
+|Pos|Anzahl|Name                   |Wert                     |Reichelt Bestellnr.     |Bemerkung                        |
+|---|------|-----------------------|-------------------------|------------------------|---------------------------------|
+|1  |5     |C1, C3, C4, C5, C7     |100nF                    |X7R-2,5 100N KOM        |                                 |
+|2  |1     |C2                     |220µF/35V                |RAD FR 220/50 (RM 5,08) |alternativ RAD FR 220/35         |
+|3  |1     |C6                     |100µF/16V                |RAD FR 100/16           |                                 |
+|4  |1     |D1                     |1N4007                   |1N 4007                 |                                 |
+|5  |2     |D2, D3                 |SB320                    |SB 320                  |                                 |
+|7  |1     |IC2                    |MAX485CPA                |MAX 485 CPA             |                                 |
+|8  |1     |IC3                    |78L05                    |µA 78L05                |                                 |
+|9  |1     |IC4                    |6N137                    |6N 137                  |                                 |
+|10 |1     |IC5                    |LM393N                   |LM 393 DIP              |                                 |
+|11 |1     |IC6                    |PC817                    |LTV 817                 |                                 |
+|12 |2     |K1, K2                 |RJ45_8POLIG              |MEBP 8-8S               |                                 |
+|13 |1     |K3                     |Stiftleiste_1x06_W_2,54  |SL 1X40W 2,54           |                                 |
+|14 |1     |K4                     |Stiftleiste_1x06_G_2,54  |SL 1X40G 2,54           |                                 |
+|15 |1     |K6                     |KLEMME2POL               |AKL 101-02              |                                 |
+|16 |1     |K7                     |KLEMME4POL               |AKL 101-04              |                                 |
+|17 |3     |R1, R3, R11            |22,1K                    |METALL 22,1K            |                                 |
+|18 |1     |R2                     |4,87K                    |METALL 4,87K            |                                 |
+|19 |1     |R4                     |4,64K                    |METALL 4,64K            |                                 |
+|20 |1     |R5                     |1,8 2W                   |2W METALL 1,8           |                                 |
+|21 |2     |R6, R7                 |390                      |METALL 390              |                                 |
+|22 |1     |R8                     |560                      |METALL 560              |                                 |
+|23 |2     |R9, R16                |10K                      |METALL 10,0K            |                                 |
+|24 |1     |R10                    |4,75K                    |METALL 4,75K            |                                 |
+|25 |1     |R12                    |120                      |METALL 120              |                                 |
+|26 |3     |R13, R17, R18          |1K                       |METALL 1,00K            |                                 |
+|27 |1     |R14                    |33 2W                    |2W METALL 33            |                                 |
+|28 |1     |R15                    |5,1K                     |METALL 5,10K            |                                 |
+|29 |1     |RPI Header             |40pol                    |RPI HEADER 40           |                                 |
+|30 |1     |RPI Abstandsbolzen Set |20mm                     |RPI MOUNTINGKIT2        |                                 |
+|31 |4     |IC-Sockel 8-polig      |                         |GS 8P                   |Einen Sockel für PC817 halbieren |
 
 ## Steuerung
 
