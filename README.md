@@ -20,9 +20,12 @@ Dieses Projekt ist noch in der Entstehung. Eine Übersetzung ins Englische wird 
 - Einfache Konfiguration von komplexen Ablaufsteuerungen über S88-Module und lokale RailCom-Detektoren
 - Konfiguration von DCC-Decodern über Programmiergleis
 - Konfiguration von DCC-Decodern über Hauptgleis (POM)
-- Sehr einfache und Komfortable Konfiguration von Funktionmapping/Funktionsausgängen für diverse Decoder-Familien
+- Sehr einfache und komfortable Konfiguration von Funktionmapping/Funktionsausgängen für diverse Decoder-Familien
 
-FM22 ist eine RailCom-fähige DCC-Zentrale..
+FM22 ist eine RailCom-fähige DCC-Zentrale, welche quelloffene Software nutzt. Die zur Steuerung notwendige Hardware ist dokumentiert, so dass jeder Interessierte die
+FM22-Zentrale nachbauen kann. Die dafür notwendigen Bauteile sind Standardbauteile, die man sich einfach auf dem Elektronik-Markt besorgen kann. Dabei wird teilweise auf
+Module gesetzt, so dass das schwierige Löten von SMD-Bauteilen wie STM32-Mikrocontrollern gar nicht notwendig ist. Die Funktionen der Zentrale werden ständig weiterentwickelt.
+Durch den möglichen Selbstbau der Zentrale bewegt sich der finanzielle Aufwand in einem überschaubaren Rahmen.
 
 ## Inhaltsverzeichnis
 
