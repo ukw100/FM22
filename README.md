@@ -651,7 +651,7 @@ Hier kann die Adresse des Decoders gewechselt werden:
 Dabei werden Umstellungen von kurzer auf lange Adresse - und umgekehrt - automatisch vorgenommen. Beachte dazu auch die ausgegebenen Empfehlungen zu den Adressbereichen.
 
 Hinweis: Die FM22-Zentrale bietet zwar über POM die Möglichkeit, die Adresse zu ändern. Nur verweigern die meisten Decoder aus Betriebssicherheitsgründen die Änderung der
-Adresse über POM. Diese kann dann nur über die Programmiergleis-Programmierung [POM Decoder-Adresse](#pom-decoder-adresse) geändert werden.
+Adresse über POM. Diese kann dann nur über die Programmiergleis-Programmierung [PGM Decoder-Adresse](#pgm-decoder-adresse) geändert werden.
 
 ### POM Decoder-CV
 
