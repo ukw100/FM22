@@ -504,7 +504,7 @@ die Lok also gar nicht mehr von der Anlage genommen werden. Die heutigen Decoder
 das Hauptgleis - mit einer Ausnahme: Meist kann die Adresse ausschließlich über das Programmiergleis eingestellt werden.
 
 Der Grund dafür ist einfach: Auch nach Ändern der Decoderadresse verliert man niemals die Kontrolle über den Decoder, denn hier
-können sämtliche Konfigurationsvariablen - auch die Adresse - ohne Kenntnis der Adresse durchgeführt werden.
+können sämtliche Konfigurationsvariablen - auch die Adresse - ohne Kenntnis der Adresse selbst durchgeführt werden.
 
 ### PGM Decoder-Info
 
