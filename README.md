@@ -27,6 +27,17 @@ FM22-Zentrale nachbauen kann. Die dafür notwendigen Bauteile sind Standardbaute
 Module gesetzt, so dass das schwierige Löten von SMD-Bauteilen wie STM32-Mikrocontrollern gar nicht notwendig ist. Die Funktionen der Zentrale werden ständig weiterentwickelt.
 Durch den möglichen Selbstbau der Zentrale bewegt sich der finanzielle Aufwand in einem überschaubaren Rahmen.
 
+Die Bedienoberfläche der FM22-Zentrale wird im Browser dargestellt. Dabei sind alle Webseiten nicht statisch, sondern interaktiv. Das heißt: Sobald sich etwas ändert wie
+zum Beispiel die Geschwindigkeit der Lok, wird dies automatisch auch in der Bedienoberfläche angezeigt. Alle Bedienelemente ändern sich also automatisch, man sieht immer den
+aktuellen Zustand. Den besonderen Reiz macht die Multiuser-Fähigkeit aus. Es können mehrere Personen die Anlage, d.h. Loks, Signale, Lichtelemente und vieles mehr bedienen.
+Das geht nicht nur über den Raspberry Pi Desktop, sondern über jedes im LAN/WLAN befindliche Gerät wie PC, Laptop, Tablet oder Smartphone.
+
+Der Betrieb erfolgt "halbautomatisch", d.h. es können auf bestimmte Ereignisse automatisch vordefinierte Aktionen ausgelöst werden. Trotzdem kann man als Anwender die Steuerung
+weiterhin in der Hand haben und die Abläufe selbst kontrollieren und steuern.
+
+Durch die konsequente Nutzung von RailCom ist die Zentrale jederzeit darüber informiert, wo sich welcher Zug befindet. Die Projektion aller Lokationsdaten auf einen Gleisplan ist
+geplant bzw. befindet sich bereits in Entwicklung.
+
 ## Inhaltsverzeichnis
 
 * [Aufbau der DCC-Zentrale](#aufbau-der-dcc-zentrale)
@@ -69,6 +80,7 @@ Durch den möglichen Selbstbau der Zentrale bewegt sich der finanzielle Aufwand 
 * STM32F401CC BlackPill Board
 * H-Brücke MiniIBT 5A 12V-48V
 * Platine "FM22-Central"
+* Bauteile, siehe BOM.
 
 BOM (nicht ganz aktuell, wird mit Veröffentlichung des Schaltplans aktualisiert):
 
@@ -104,6 +116,13 @@ BOM (nicht ganz aktuell, wird mit Veröffentlichung des Schaltplans aktualisiert
 |29 |1     |RPI Header             |40pol                    |RPI HEADER 40           |                                 |
 |30 |1     |RPI Abstandsbolzen Set |20mm                     |RPI MOUNTINGKIT2        |                                 |
 |31 |4     |IC-Sockel 8-polig      |                         |GS 8P                   |Einen Sockel für PC817 halbieren |
+
+Die Zentrale ist mit bis zu 32 RailCom-Detektor-Modulen erweiterbar. Diese Module können selbst bis zu 8 Abschnitte überwachen und der Zentrale
+selbstständig mitteilen, in welchem Abschnitt sich gerade welche Lok befindet. Insgesamt lassen sich damit bis zu 256 Abschnitte auf der Anlage
+überwachen.
+
+Die Beschreibung des RC-Detektor-Moduls folgt später an dieser Stelle.
+
 
 ## Steuerung
 
@@ -152,7 +171,7 @@ Durch die Buttons "MF" und "MH" können automatisiert Abläufe (Macros) gestarte
 * Nach 18 Sekunden Fahrtaufnahme durch Erhöhung der Geschwindigkeit über eine Rampendefinition.
 * Nach 24 Sekunden Lokpfiff
 
-Diese war nur ein Beispiel. Insgesamt können bis zu 8 Macros mit je 16 Aktionen pro Lok definiert werden. Weitere Informationen siehe [Lok-Macros](#lok-macros).
+Dieses war nur ein Beispiel. Insgesamt können bis zu 8 Macros mit je 16 Aktionen pro Lok definiert werden. Weitere Informationen siehe [Lok-Macros](#lok-macros).
 
 Die Spalte "Adresse" gibt die Lokadresse aus. Die Spalte "RC2" zeigt die Übertragungsqualität von RailCom-Rückmeldungen während des Betriebs.
 Solange keine Störungen auf der Anlage sind, sollten hier Werte zwischen 98% und 100% ausgegeben werden. Bei 100% wurde jeder DCC-Befehl korrekt
@@ -233,7 +252,7 @@ zum Beispiel ein Lok-Pfiff.
 
 Die Einstellung "Sound" dient lediglich der Information, ob die gewählte Funktion einen Sound abspielt oder nicht.
 
-Am Ende kann dann die Bediener-Oberfläche für eine Lok mit umfangreichen Lokfunktionen folgendermaßen aussehen:
+Sind alle Einstellungen vorgenommen worden, könnte die Bedienoberfläche für eine Lok mit umfangreichen Lokfunktionen folgendermaßen aussehen:
 
 ![DCC-FM22 Loksteuerung im Detail](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok2.png "Loksteuerung im Detail")
 
@@ -536,13 +555,36 @@ das Hauptgleis - mit einer Ausnahme: Meist kann die Adresse ausschließlich übe
 Der Grund dafür ist einfach: Auch nach Ändern der Decoderadresse verliert man niemals die Kontrolle über den Decoder, denn hier
 können sämtliche Konfigurationsvariablen - auch die Adresse - ohne Kenntnis der Adresse selbst durchgeführt werden.
 
+Über die Menüeinträge unterhalb Programmierung -> Programmiergleis können die Programmierungen über das Programmiergleis vorgenommen werden, über die
+Menüeinträge unterhalb Programmierung -> Hauptgleis können die Programmierungen über das Hauptgleis durch direkte Angabe der Adresse vorgenommen werden.
+
 ### PGM Decoder-Info
+
+Hier erhält man nützliche Decoder-Informationen wie Hersteller, Version, Modell, Adresse und die wichtigsten Konfigurationsparameter.
+
+Ganz wichtig: Da hier ohne die Angabe jedweder Adresse gearbeitet wird, darf nur eine Lok auf dem Programmiergleis stehen! Das Hauptgleis darf nicht
+gleichzeitig angeschlossen sein!
+
+Nach Betätigen der Schaltfläche "Decoder-Info lesen" erhält man die folgende Ausgabe:
 
 ![DCC-FM22 Decoder-Info](https://raw.githubusercontent.com/ukw100/FM22/main/images/pgm-info-3.png " Decoder-Info")
 
+Dabei werden zunächst die Inhalte der wichtigsten Konfigurationsvariablen (CVs) angezeigt. Da sich die Bedeutung der CV #29 aus einzelnen Bits zusammensetzt, werden diese hier
+noch einmal speziell erläutert.
+
+Hinweis: Die Decoder-Infos über POM (Hauptgleisprogrammierung) werden nicht nur schneller ermittelt, sondern werden auch wesentlich ausführlicher dargestellt,
+siehe [POM Decoder-Info](#pom-decoder-info).
+
 ### PGM Decoder-Adresse
 
+Hier kann die Adresse des Decoders gewechselt werden:
+
 ![DCC-FM22 Decoder-Info](https://raw.githubusercontent.com/ukw100/FM22/main/images/pgm-addr-2.png " Decoder-Info")
+
+Beachte dazu auch die ausgegebenen Empfehlungen zu den Adressbereichen.
+
+Hinweis: Die FM22-Zentrale bietet auch die Möglichkeit, die Adresse über POM zu ändern. Nur verweigern die meisten Decoder die Programmierung der Adresse über POM. Diese kann
+dann nur über PGM geändert werden.
 
 ### PGM Decoder-CV
 
