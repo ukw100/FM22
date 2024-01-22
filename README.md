@@ -794,14 +794,29 @@ Liste von Modes und deren Beedeutung entnimmst Du am besten dem Decoder-Handbuch
 
 ## Zentrale
 
-![DCC-FM22 Menu Zentrale](https://raw.githubusercontent.com/ukw100/FM22/main/images/menu3.png "Menu Zentrale")
+Das Menü "Steuerung" bietet folgende Punkte:
+
+<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/menu3.png">
+
+* [Einstellungen](#einstellungen)
+* [Netzwerk](#netzwerk)
+* [Upload Hex](#upload-hex)
+* [Flash STM32](#flash-stm32)
+* Info
+
+Menu Zentrale](https://raw.githubusercontent.com/ukw100/FM22/main/images/menu3.png "Menu Zentrale")
 
 ### Einstellungen
 
+Todo
 
 ### Konfiguration Netzwerk
 
+Todo
+
 ### Firmware-Updates
+
+Todo
 
 ## Anhang
 
