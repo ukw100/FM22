@@ -737,7 +737,7 @@ Dann erhalten die Konfigurationszeilen folgende Bedeutungen:
 * Zeile 3: Wenn Vorwärtsrichtung an und F1 an, dann Ausgang AUX1 an.
 * Zeile 4: Wenn F2 an, dann Ausgang AUX2 an.
 * Zeile 5: Wenn F3 an, dann Logik "Rangiergang" an.
-* Zeile 6: Wenn F4 an, dann Logik "ABV" an.
+* Zeile 6: Wenn F4 an, dann Logik "ABV aus" an.
 * Zeile 7: Wenn F5 an, dann AUX3 an.
 * Zeile 8: Wenn F6 an, dann AUX4 an.
 * usw.
@@ -746,14 +746,16 @@ Nun kann man durch Klick auf eine Tabellenzelle die Bedeutung einer Verknüpfung
 
 Der Klick auf eine Zelle in den Spalten "Bedingung" löst folgendes aus:
 
-* Erster Klick: Bedingung wird grün, d.h. der oder die Ausgänge werden gesetzt/gelöscht, wenn die Bedingung zutrifft.
-* Zweiter Klick: Bedingung wird rot d.h. der oder die Ausgänge werden gesetzt/gelöscht, wenn die Bedingung NICHT zutrifft.
+* Erster Klick: Bedingung wird grün, d.h. der oder die Ausgänge werden gesetzt, wenn die Bedingung zutrifft.
+* Zweiter Klick: Bedingung wird rot d.h. der oder die Ausgänge werden gesetzt, wenn die Bedingung NICHT zutrifft.
 * Dritter Klick: Bedingung wird farblos, d.h. die Verknüpfung wird gelöscht.
 
 Der Klick auf eine Zelle in den Spalten "Ausgang" oder "Logik" löst folgendes aus:
 
 * Erster Klick: Ausgang wird grün, d.h. Ausgang/Logik wird für die gegebenen Bedingungen gesetzt.
 * Zweiter Klick: Bedingung wird farblos, d.h. die Verknüpfung zur Bedingung wird gelöscht.
+
+Hat man alle gewünschten Konfigurationen vorgenommen, dann kann man diese mit dem Klick auf die Schaltfläche "Änderungen speichern" vornehmen.
 
 ### POM Funktionsausgänge
 
