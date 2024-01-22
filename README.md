@@ -804,8 +804,6 @@ Das Menü "Steuerung" bietet folgende Punkte:
 * [Flash STM32](#flash-stm32)
 * Info
 
-Menu Zentrale](https://raw.githubusercontent.com/ukw100/FM22/main/images/menu3.png "Menu Zentrale")
-
 ### Einstellungen
 
 Todo
