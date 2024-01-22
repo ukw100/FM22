@@ -27,9 +27,9 @@ FM22-Zentrale nachbauen kann. Bei den benötigten Bauteilen handelt es sich um S
 Module gesetzt, so dass das schwierige Verlöten von SMD-Bauteilen wie STM32-Mikrocontrollern nicht notwendig ist. Die Funktionen der Zentrale werden ständig erweitert.
 Durch den möglichen Selbstbau der Zentrale hält sich der finanzielle Aufwand in einem überschaubaren Rahmen.
 
-Die Benutzeroberfläche der FM22-Zentrale wird im Browser dargestellt. Dabei sind alle Webseiten nicht statisch, sondern interaktiv. Das bedeutet: Sobald sich etwas ändert, wie
+Die Benutzeroberfläche der FM22-Zentrale wird im Browser dargestellt. Dabei sind alle Webseiten nicht statisch, sondern interaktiv. Das bedeutet: Sobald sich etwas ändert wie
 zum Beispiel die Geschwindigkeit der Lok, wird dies automatisch auch in der Bedienoberfläche angezeigt. Alle Bedienelemente ändern sich also automatisch, man sieht immer den aktuellen
-aktuellen Zustand. Der besondere Reiz liegt in der Mehrbenutzerfähigkeit. Die auf der Anlage befindlichen Loks, Signale, Lichtelemente und vieles mehr können von mehreren Personen
+Zustand. Der besondere Reiz liegt in der Mehrbenutzerfähigkeit. Die auf der Anlage befindlichen Loks, Signale, Lichtelemente und vieles mehr können von mehreren Personen
 über mehrere Geräte bedient werden. Dies funktioniert nicht nur über den Raspberry Pi Desktop, sondern über jedes im LAN/WLAN befindliche Gerät wie PC, Laptop, Tablet
 oder auch Smartphone.
 
@@ -133,9 +133,9 @@ Das Menü "Steuerung" bietet folgende Punkte:
 * [Lokliste](#lokliste)
 * [Zusatzdecoder](#zusatzdecoder)
 * [Weichen](#weichen)
+* [Fahrstraßen](#fahrstraßen)
 * [Signale](#signale)
 * [LEDs](#leds)
-* [Fahrstraßen](#fahrstraßen)
 * [S88](#s88-module)
 * [RC-Detektoren](#railcom-module)
 * [Decodertest](#decodertest)
@@ -232,7 +232,7 @@ also die Lokliste neu sortieren. Ansonsten gelten die gleichen Einstellungen wie
 ### Lok-Funktionen
 
 Die Lokfunktionen müssen für jeden Lokdecoder einmal eingestellt werden. Dies ist relativ einfach und schnell zu bewerkstelligen, da die meisten Lokfunktionen
-vordefiniert und müssen nur noch den Funktionstasten F0 bis F31 zugeordnet werden.
+vordefiniert sind. Diese müssen nur noch den Funktionstasten F0 bis F31 zugeordnet werden.
 
 Dies geschieht durch Klick auf die Schaltfläche "FX" im unteren Bereich. Dann öffnet sich unterhalb der Schaltfläche folgender Dialog:
 
