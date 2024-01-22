@@ -67,7 +67,7 @@ FM22 ist eine RailCom-fähige DCC-Zentrale..
 * H-Brücke MiniIBT 5A 12V-48V
 * Platine "FM22-Central"
 
-BOM:
+BOM (nicht ganz aktuell, wird mit Veröffentlichung des Schaltplans aktualisiert):
 
 |Pos|Anzahl|Name|Wert|Reichelt Bestellnr.|Bemerkung|
 |---|------|----|----|-------------------|---------|
@@ -616,8 +616,7 @@ in der letzten Zeile die CV-Werte individuell anpassen.
 
 <img align="right" src="https://github.com/ukw100/FM22/blob/main/images/pom-ausgaenge-5.png">
 
-Einige der umfangreichen Modi sind rechts aufgelistet. Für jeden der möglichen Ausgänge können sie mit einem Klick aus
-der Liste ausgewählt werden.
+Einige der umfangreichen Modi sind rechts aufgelistet. Für jeden der möglichen Ausgänge können mit einem Klick aus der Liste ausgewählt werden.
 
 ## Zentrale
 
