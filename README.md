@@ -789,7 +789,7 @@ von Kupplungen notwendig.
 Jeden Ausgang kann man noch mit einer Pulsweitenmodulation (PWM) belegen, die zur Helligkeitssteuerung für LEDs genutzt werden kann. Dabei bedeutet der Wert
 "0" "LED dunkel", der Wert "31" "maximale Helligkeit", alles andere dazwischen sind entsprechende Zwischenwerte.
 
-Einige der möglichen Modes sind rechts aufgelistet. Für jeden der möglichen Ausgänge können mit einem Klick aus der Liste ausgewählt werden. Die vollständige
+Einige der möglichen Modes sind rechts aufgelistet. Diese können für jeden der möglichen Ausgänge mit einem Klick aus der Liste ausgewählt werden. Die vollständige
 Liste von Modes und deren Beedeutung entnimmst Du am besten dem Decoder-Handbuch.
 
 ## Zentrale
