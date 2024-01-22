@@ -546,6 +546,7 @@ Nachteile:
 
 * Es darf nur ein Decoder über das Programmiergleis angeschlossen sein
 * Programmierung ist sehr langsam
+* Am Decoder muss ein Verbraucher (Lokmotor, LED-Kette oder sonstiges) angeschlossen sein.
 
 Heutzutage ist die Programmierung über das Programmiergleis nur noch für eine einzige Funktion gedacht, nämlich das Übertragen bzw. Einstellen
 einer neuen Decoder-Adresse. Alle anderen Programmierungen lassen sich mit modernen Decodern auf dem Hauptgleis erledigen. Damit muss
@@ -554,6 +555,12 @@ das Hauptgleis - mit einer Ausnahme: Meist kann die Adresse ausschließlich übe
 
 Der Grund dafür ist einfach: Auch nach Ändern der Decoderadresse verliert man niemals die Kontrolle über den Decoder, denn hier
 können sämtliche Konfigurationsvariablen - auch die Adresse - ohne Kenntnis der Adresse selbst durchgeführt werden.
+
+Die Ermittlung eines CV-Wertes über PGM geschieht durch eine Strommessung. Dies ist nur möglich, wenn der Decoder auch die Möglichkeit hat, den
+entsprechenden Strom zu erzeugen. Manche Lokdecoder verwenden dafür den Lokmotor, der dann während der Programmierung kleine Sprünge macht, andere
+erwarten einen speziellen Verbraucher wie zum Beispiel eine LED-Kette, die an einem Funktionsausgang angeschlossen werden muss. Im Zweifel muss man
+hier das Decoder-Handbuch zu Rate ziehen. Da bei RailCom-fähigen Decodern fast immer die Programmierung über POM vorzuziehen ist, kann her nur geraten
+werden, bis auf die Programmierung der Decoder-Adresse auch POM zu verwenden.
 
 Über die Menüeinträge unterhalb Programmierung -> Programmiergleis können die Programmierungen über das Programmiergleis vorgenommen werden, über die
 Menüeinträge unterhalb Programmierung -> Hauptgleis können die Programmierungen über das Hauptgleis durch direkte Angabe der Adresse vorgenommen werden.
@@ -581,24 +588,70 @@ Hier kann die Adresse des Decoders gewechselt werden:
 
 ![DCC-FM22 Decoder-Info](https://raw.githubusercontent.com/ukw100/FM22/main/images/pgm-addr-2.png " Decoder-Info")
 
-Beachte dazu auch die ausgegebenen Empfehlungen zu den Adressbereichen.
+Dabei werden Umstellungen von kurzer auf lange Adresse - und umgekehrt - automatisch vorgenommen. Beachte dazu auch die ausgegebenen Empfehlungen zu den Adressbereichen.
 
-Hinweis: Die FM22-Zentrale bietet auch die Möglichkeit, die Adresse über POM zu ändern. Nur verweigern die meisten Decoder die Programmierung der Adresse über POM. Diese kann
-dann nur über PGM geändert werden.
+Hinweis: Die FM22-Zentrale bietet über [POM Decoder-Adresse](#pom-decoder-adresse) auch die Möglichkeit, die Adresse über POM zu ändern. Nur verweigern die meisten Decoder
+aus Betriebssicherheitsgründen die Änderung der Adresse über POM. Diese kann dann nur über die Programmiergleis-Programmierung  (PGM) geändert werden.
 
 ### PGM Decoder-CV
 
+Unter diesem Menüpunkt können einzelne CV-Werte geändert werden. Zunächst sollte man den Inhalt einer Konfigurationsvariablen auslesen:
+
 ![DCC-FM22 Decoder-CV](https://raw.githubusercontent.com/ukw100/FM22/main/images/pgm-cv-2.png " Decoder-CV")
+
+Anschließend kann man den Wert ändern. Die Eingabe des neuen Wertes kann dezimal oder binär erfolgen. Durch Betätigung der Schaltfläche "CV Speichern" werden die neuen Daten in
+der Konfigurationsvariablen gespeichert.
+
+Hinweis: Die CV-Inhalte können auch über POM (Hauptgleisprogrammierung) ermittelt und geändert werden, siehe [POM Decoder-Info](#pom-decoder-info). Die Programmierung über POM
+ist dabei im allgemeinen schneller.
 
 ## Programmierung über Hauptgleis (POM)
 
+Neben der Decoder-Programmierung über PGM ermöglichen fast alle modernen DCC-Decoder auch die Programmierung direkt auf dem Hauptgleis (POM).
+
+Dieses hat wesentliche Vorteile:
+
+* Die Programmierung kann auf dem Hauptgleis vorgenommen werden. Ein spezielles vom Rest der Anlage isoliertes Programmiergleis ist nicht notwendig.
+* Die Programmierung und die Rückmeldung erfolgt wesentlich schneller.
+* Die Rückmeldung des Dedoders erfolgt nicht über Stromspitzen, sondern über RailCom.
+* Es muss kein spezieller Verbraucher am Decoder angeschlossen werden.
+
+Hinweis: Es gibt auch POM-fähige Decoder, die zwar über POM programmiert werden können, aber nicht Railcom-fähig sind. In diesem Fall bekommt man keine Rückmeldung vom Decoder,
+ob die Programmierung erfolgreich war oder nicht. Im Zweifel muss man, wenn man die programmierten Werte wieder auslesen will, dann die Programmierung über das Programmiergleis
+vornehmen (PGM).
+
 ### POM Decoder-Info
+
+Hier erhält man nützliche Decoder-Informationen wie Hersteller, Version, Modell, Adresse und die wichtigsten Konfigurationsparameter.
+
+Nach Betätigen der Schaltfläche "Decoder-Info lesen" erhält man die folgende Ausgabe:
 
 ![DCC-FM22 Decoder-Info](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-info-2.png "Decoder-Info")
 
+Dabei werden zunächst die Inhalte der wichtigsten Konfigurationsvariablen (CVs) angezeigt. Da sich die Bedeutung der CV #29 aus einzelnen Bits zusammensetzt, werden diese hier
+noch einmal speziell erläutert. Darunter werden dann die Inhalte der Konfigurationsvariablen #28 und #29 im Detail aufgeführt, da sich hier die Bedeutungen der Werte aus einzelnen
+Bits zusammensetzen. Hier hat man die Möglichkeit diese Einzelwerte direkt zu ändern und zu speichern.
+
+Zum Schluss werden noch erweiterte Decoder-Infos ausgegeben, die herstellerspezifisch sind und je nach Decoder unterschiedlich ausfallen. Das können unter anderem sein:
+
+* Hersteller-ID
+* Decodertyp
+* Produktnummer
+* Seriennummer
+* Produktionsdatum und -zeit
+* RailCom-Version
+* Firmware-Version
+
 ### POM Decoder-Adresse
 
+Hier kann die Adresse des Decoders gewechselt werden:
+
 ![DCC-FM22 Decoder-Adresse](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-addr.png "Decoder-Adresse")
+
+Dabei werden Umstellungen von kurzer auf lange Adresse - und umgekehrt - automatisch vorgenommen. Beachte dazu auch die ausgegebenen Empfehlungen zu den Adressbereichen.
+
+Hinweis: Die FM22-Zentrale bietet zwar über POM die Möglichkeit, die Adresse zu ändern. Nur verweigern die meisten Decoder aus Betriebssicherheitsgründen die Änderung der
+Adresse über POM. Diese kann dann nur über die Programmiergleis-Programmierung [POM Decoder-Adresse](#pom-decoder-adresse) geändert werden.
 
 ### POM Decoder-CV
 
