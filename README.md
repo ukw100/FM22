@@ -225,11 +225,14 @@ Hier sind nun folgende Einstellungen nötig:
 * Sound: Ja/nein
 
 Der Funktionsname kann aus einer Liste von ca. 250 Bezeichnungen gewählt werden. Mit der Einstellung "Puls" kann man wählen, ob ein Druck auf die Funktionstaste
-lediglich einen kurzen Impuls auslösen soll oder ein Dauersignal. Der kurze Impuls ist sinnvoll bei Geräuschen, die nicht fortwährend abgespielt werden soll, wie
-zuk Beispiel ein Lok-Pfiff.
+lediglich einen kurzen Impuls auslösen soll oder ein Dauersignal. Der kurze Impuls ist sinnvoll bei Geräuschen, die nicht fortwährend abgespielt werden sollen, wie
+zum Beispiel ein Lok-Pfiff.
 
 Die Einstellung "Sound" dient lediglich der Information, ob die gewählte Funktion einen Sound abspielt oder nicht.
 
+Am Ende kann dann die Bediener-Oberfläche für eine Lok mit umfangreichen Lokfunktionen folgendermaßen aussehen:
+
+![DCC-FM22 Loksteuerung im Detail](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok2.png "Loksteuerung im Detail")
 
 ### Lok-Macros
 
