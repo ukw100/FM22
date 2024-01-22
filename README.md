@@ -761,7 +761,7 @@ Hat man alle gewünschten Konfigurationen vorgenommen, dann kann man diese mit d
 ### POM Funktionsausgänge
 
 Manche Hersteller ermöglichen es, die Funktionsausgänge des Decoders in ihrer Eigenschaft zu ändern. Das reicht vom langsamen Hochdimmen beim Einschalten über Blinken bis zu
-umfangreichen Simulationen wie "Feuerbüchse".
+umfangreichen Simulationen wie "Feuerbüchse" oder "Pantographensteuerung".
 
 Um solche Funktionsausgänge zu konfigurieren, ist zunächst die Eingabe der Decoderadresse nötig.
 
@@ -771,7 +771,7 @@ Anhand der Adresse wird dann im nächsten Schritt der Decoderhersteller ermittel
 
 ![DCC-FM22 Funktionsausgänge Hersteller](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-2.png "Funktionsausgänge Hersteller")
 
-Anschließen lässt sich dann die Konfiguration der Funktionsausgänge auslesen:
+Anschließend lässt sich dann die Konfiguration der Funktionsausgänge auslesen:
 
 ![DCC-FM22 Funktionsausgänge einlesen](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-3.png "Funktionsausgänge einlesen")
 
@@ -782,11 +782,15 @@ Diese werden dann in einer Tabelle angezeigt. Hier ein Beispiel eines ESU-Decode
 <img align="right" src="https://github.com/ukw100/FM22/blob/main/images/pom-ausgaenge-5.png">
 
 Man kann nun den sogenannten "Mode" des Ausgangs über eine Dropdown-Liste anpassen. Ebenso kann man eine Einschalt- und Ausschaltverzögerung konfigurieren.
-Die automatische Abschaltung sorgt dafür, dass der Ausgang nach einer wählbaren Dauer automatisch deaktiviert wird. Das ist unter anderem für die Steuerung
-von Kupplungen notwendig und daher wichtig. Jeden Ausgang kann man noch mit einer Pulsweitenmodulation (PWM) belegen, die als Helligkeit für LEDs genutzt werden
-kann. Dabei bedeutet der Wert "0" "LED dunkel", der Wert "31" "maximale Helligkeit", alles andere dazwischen entsprechende Zwischenwerte.
 
-Einige der möglichen Modes sind rechts aufgelistet. Für jeden der möglichen Ausgänge können mit einem Klick aus der Liste ausgewählt werden.
+Die automatische Abschaltung sorgt dafür, dass der Ausgang nach einer wählbaren Dauer automatisch deaktiviert wird. Das ist unter anderem für die Steuerung
+von Kupplungen notwendig.
+
+Jeden Ausgang kann man noch mit einer Pulsweitenmodulation (PWM) belegen, die zur Helligkeitssteuerung für LEDs genutzt werden kann. Dabei bedeutet der Wert
+"0" "LED dunkel", der Wert "31" "maximale Helligkeit", alles andere dazwischen sind entsprechende Zwischenwerte.
+
+Einige der möglichen Modes sind rechts aufgelistet. Für jeden der möglichen Ausgänge können mit einem Klick aus der Liste ausgewählt werden. Die vollständige
+Liste von Modes und deren Beedeutung entnimmst Du am besten dem Decoder-Handbuch.
 
 ## Zentrale
 
