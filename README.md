@@ -22,21 +22,22 @@ Dieses Projekt ist noch in der Entstehung. Eine Übersetzung ins Englische wird 
 - Konfiguration von DCC-Decodern über Hauptgleis (POM)
 - Sehr einfache und komfortable Konfiguration von Funktionmapping/Funktionsausgängen für diverse Decoder-Familien
 
-FM22 ist eine RailCom-fähige DCC-Zentrale, welche quelloffene Software nutzt. Die zur Steuerung notwendige Hardware ist dokumentiert, so dass jeder Interessierte die
-FM22-Zentrale nachbauen kann. Die dafür notwendigen Bauteile sind Standardbauteile, die man sich einfach auf dem Elektronik-Markt besorgen kann. Dabei wird teilweise auf
-Module gesetzt, so dass das schwierige Löten von SMD-Bauteilen wie STM32-Mikrocontrollern gar nicht notwendig ist. Die Funktionen der Zentrale werden ständig weiterentwickelt.
-Durch den möglichen Selbstbau der Zentrale bewegt sich der finanzielle Aufwand in einem überschaubaren Rahmen.
+FM22 ist eine RailCom-fähige DCC-Zentrale, die Open-Source-Software verwendet. Die zur Steuerung notwendige Hardware ist dokumentiert, so dass jeder Interessierte die
+FM22-Zentrale nachbauen kann. Bei den benötigten Bauteilen handelt es sich um Standardkomponenten, die auf dem Elektronikmarkt leicht zu beschaffen sind. Teilweise wird auf
+Module gesetzt, so dass das schwierige Verlöten von SMD-Bauteilen wie STM32-Mikrocontrollern nicht notwendig ist. Die Funktionen der Zentrale werden ständig erweitert.
+Durch den möglichen Selbstbau der Zentrale hält sich der finanzielle Aufwand in einem überschaubaren Rahmen.
 
-Die Bedienoberfläche der FM22-Zentrale wird im Browser dargestellt. Dabei sind alle Webseiten nicht statisch, sondern interaktiv. Das heißt: Sobald sich etwas ändert wie
-zum Beispiel die Geschwindigkeit der Lok, wird dies automatisch auch in der Bedienoberfläche angezeigt. Alle Bedienelemente ändern sich also automatisch, man sieht immer den
-aktuellen Zustand. Den besonderen Reiz macht die Multiuser-Fähigkeit aus. Es können mehrere Personen die Anlage, d.h. Loks, Signale, Lichtelemente und vieles mehr bedienen.
-Das geht nicht nur über den Raspberry Pi Desktop, sondern über jedes im LAN/WLAN befindliche Gerät wie PC, Laptop, Tablet oder Smartphone.
+Die Benutzeroberfläche der FM22-Zentrale wird im Browser dargestellt. Dabei sind alle Webseiten nicht statisch, sondern interaktiv. Das bedeutet: Sobald sich etwas ändert, wie
+zum Beispiel die Geschwindigkeit der Lok, wird dies automatisch auch in der Bedienoberfläche angezeigt. Alle Bedienelemente ändern sich also automatisch, man sieht immer den aktuellen
+aktuellen Zustand. Der besondere Reiz liegt in der Mehrbenutzerfähigkeit. Die auf der Anlage befindlichen Loks, Signale, Lichtelemente und vieles mehr können von mehreren Personen
+über mehrere Geräte bedient werden. Dies funktioniert nicht nur über den Raspberry Pi Desktop, sondern über jedes im LAN/WLAN befindliche Gerät wie PC, Laptop, Tablet
+oder auch Smartphone.
 
-Der Betrieb erfolgt "halbautomatisch", d.h. es können auf bestimmte Ereignisse automatisch vordefinierte Aktionen ausgelöst werden. Trotzdem kann man als Anwender die Steuerung
-weiterhin in der Hand haben und die Abläufe selbst kontrollieren und steuern.
+Der Betrieb erfolgt "halbautomatisch", d.h. bei bestimmten Ereignissen können vordefinierte Aktionen automatisch ausgelöst werden. Dennoch behält der Benutzer die Kontrolle
+in der Hand und kontrolliert bzw. steuert die Abläufe selbst.
 
-Durch die konsequente Nutzung von RailCom ist die Zentrale jederzeit darüber informiert, wo sich welcher Zug befindet. Die Projektion aller Lokationsdaten auf einen Gleisplan ist
-geplant bzw. befindet sich bereits in Entwicklung.
+Durch den konsequenten Einsatz von RailCom ist die Zentrale jederzeit darüber informiert, wo sich welcher Zug befindet. Die Abbildung aller Ortungsdaten auf einem Gleisplan ist
+Gleisplan ist in Entwicklung.
 
 ## Inhaltsverzeichnis
 
@@ -117,9 +118,8 @@ BOM (nicht ganz aktuell, wird mit Veröffentlichung des Schaltplans aktualisiert
 |30 |1     |RPI Abstandsbolzen Set |20mm                     |RPI MOUNTINGKIT2        |                                 |
 |31 |4     |IC-Sockel 8-polig      |                         |GS 8P                   |Einen Sockel für PC817 halbieren |
 
-Die Zentrale ist mit bis zu 32 RailCom-Detektor-Modulen erweiterbar. Diese Module können selbst bis zu 8 Abschnitte überwachen und der Zentrale
-selbstständig mitteilen, in welchem Abschnitt sich gerade welche Lok befindet. Insgesamt lassen sich damit bis zu 256 Abschnitte auf der Anlage
-überwachen.
+Die Zentrale kann mit bis zu 32 RailCom-Detektormodulen erweitert werden. Diese Module können selbst bis zu 8 Streckenabschnitte überwachen und der Zentrale
+melden, in welchem Abschnitt sich welche Lok gerade befindet. Insgesamt können so bis zu 256 Abschnitte auf der Anlage überwacht werden.
 
 Die Beschreibung des RC-Detektor-Moduls folgt später an dieser Stelle.
 
@@ -171,22 +171,21 @@ Durch die Buttons "MF" und "MH" können automatisiert Abläufe (Macros) gestarte
 * Nach 18 Sekunden Fahrtaufnahme durch Erhöhung der Geschwindigkeit über eine Rampendefinition.
 * Nach 24 Sekunden Lokpfiff
 
-Dieses war nur ein Beispiel. Insgesamt können bis zu 8 Macros mit je 16 Aktionen pro Lok definiert werden. Weitere Informationen siehe [Lok-Macros](#lok-macros).
+Dies ist nur ein Beispiel. Insgesamt können bis zu 8 Makros mit jeweils 16 Aktionen pro Lok definiert werden. Für weitere Informationen siehe [Lok-Macros](#lok-macros).
 
-Die Spalte "Adresse" gibt die Lokadresse aus. Die Spalte "RC2" zeigt die Übertragungsqualität von RailCom-Rückmeldungen während des Betriebs.
-Solange keine Störungen auf der Anlage sind, sollten hier Werte zwischen 98% und 100% ausgegeben werden. Bei 100% wurde jeder DCC-Befehl korrekt
-vom Decoder beantwortet und auch vollständig von der Zentrale "verstanden". Nach den Spalten ID, Name und Adresse kann sortiert werden. Die Sortierung geschieht
-durch Klick auf die jeweilige Spalte. Die aktive Spaltenbezeichnung wird dann in grün gezeigt.
+In der Spalte "Adresse" wird die Lokadresse angezeigt. Die Spalte "RC2" zeigt die Übertragungsqualität der RailCom-Rückmeldungen im Betrieb.
+Solange keine Störungen auf der Anlage vorliegen, sollten hier Werte zwischen 98% und 100% angezeigt werden. Bei einem Wert von 100% wurde jeder DCC-Befehl vom Decoder korrekt
+vom Decoder richtig beantwortet und auch von der Zentrale vollständig "verstanden". Nach den Spalten ID, Name und Adresse kann sortiert werden. Die Sortierung erfolgt
+durch Anklicken der entsprechenden Spalte. Die aktive Spaltenbezeichnung wird dann grün dargestellt.
 
-Der Button "Bearbeiten" erscheint nur im Bearbeitungsmodus. Hier können dann die Grundeinstellungen der Lok - wie zum Beispiel die Adresse -
-geändert werden.
+Der Button "Bearbeiten" erscheint nur im Bearbeitungsmodus. Hier können dann die Grundeinstellungen der Lok - wie zum Beispiel die Adresse - geändert werden.
 
-Durch Klick auf die Lokbezeichnung gelangt man in die Loksteuerung der gewünschten Lok.
+Durch Anklicken des Loknamens gelangt man in die Loksteuerung der gewünschten Lok.
 
 ### Loksteuerung
 
-Auf dieser Seite kann die ausgewählte Lok gesteuert werden. Dies ist über Smartphone, Tablett, direkt am Pi oder auch mit einem PC möglich.
-So können mehrere Personen verschiedene Loks gleichzeitig steuern.
+Auf dieser Seite kann die ausgewählte Lok gesteuert werden. Dies ist per Smartphone, Tablet, direkt am Pi oder auch mit einem PC möglich.
+So können mehrere Personen gleichzeitig verschiedene Loks steuern.
 
 Hier sieht man:
 
@@ -199,27 +198,27 @@ Hier sieht man:
 
 ![DCC-FM22 Loksteuerung](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok1.png "Loksteuerung")
 
-Im obigen Beispiel wird als Lokadresse 1012 ausgegeben. Die Adresse ist grün hinterlegt, um zu signalisieren, dass die Lok "online" ist.
-Der Aufenthaltsort der Lok ist gerade "Einfahrt Schattenbahhnhof", die Geschwindigkeit ist "0" und die Richtung ist "vorwärts".
+Im obigen Beispiel wird die Lokadresse 1012 angezeigt. Die Adresse ist grün hinterlegt, um anzuzeigen, dass die Lok "online" ist.
+Der Aufenthaltsort der Lok ist gerade "Einfahrt Schattenbahnhof", die Geschwindigkeit ist "0" und die Fahrtrichtung ist "vorwärts".
 Außerdem ist gerade die Funktion F0 "Spitzensignal / Schlusslicht rot" aktiv.
 
-Alle Ausgaben können sich sofort ändern, wenn eine andere Person oder eine aktivierte Ereignissteuerung in den Ablauf eingreift. Mittels
-Schieberegler kann die Geschwindigkeit, mit den Pfeilen darunter kann die Fahrtrichtung geändert werden. Ein Klick auf das schwarze Quadrat
-stellt die Geschwindigkeit auf 0, ein Klick auf den schwarzen Kreis daneben führt einen Notstopp aus, d.h. die Lok bleibt dann sofort stehen - ohne
-Berücksichtigung irgendwelcher eingesteller Bremsverzögerungen.
+Alle Ausgaben können sich sofort ändern, wenn eine andere Person oder eine aktivierte Ereignissteuerung in den Ablauf eingreift. Mit
+dem Schieberegler kann die Geschwindigkeit, mit den Pfeilen darunter kann die Fahrtrichtung geändert werden. Ein Klick auf das schwarze Quadrat
+setzt die Geschwindigkeit auf 0, ein Klick auf den schwarzen Kreis daneben löst einen Nothalt aus, d.h. die Lok kommt sofort zum Stehen - ohne
+Rücksicht auf eventuell eingestellte Bremsverzögerungen.
 
 Insgesamt können 8 Lok-Macros (MF, MH, M3 - M8) definiert und ausgelöst werden, siehe auch [Lok-Macros](#lok-macros).
 
 ### Neue Lok
 
-In der Lokliste kann durch Klick auf den Button "Neue Lok" unterhalb der Liste eine neue Lok angelegt werden. Dieser Button erscheint nur
-im Bearbeitungsmodus. Es erscheinen dann direkt unterhalb des Buttons Eingabefelder, mittels derer man die neue Lok anmelden kann:
+In der Lokliste kann durch Anklicken des Buttons "Neue Lok" unterhalb der Liste eine neue Lok angelegt werden. Dieser Button erscheint nur
+im Bearbeitungsmodus. Direkt unter dem Button erscheinen dann Eingabefelder, über welche die neue Lok eingetragen werden kann:
 
 ![DCC-FM22 Neue Lok](https://raw.githubusercontent.com/ukw100/FM22/main/images/neue-lok.png "Neue Lok")
 
-Im obigen Beispiel wurde als Name "BR 628 Triebwagenzug" gewählt, die Adresse auf 1019 gesetzt und die Fahrstufen mit "128" angegeben.
-Wird die Lok als "Aktiv" eingestellt, wird sie auch durch Lokbefehle gesteuert. Ist die Lok hier deaktiviert, werden keine Lokbefehle
-an die Lok gesandt. Nach Klick auf Speichern erscheint dann die neue Lok in der Lokliste.
+Im obigen Beispiel wurde der Name "BR 628 Triebwagenzug" gewählt, die Adresse auf 1019 gesetzt und die Fahrstufen auf "128".
+Ist die Lok auf "Aktiv" gestellt, wird sie auch mit Lokbefehlen gesteuert. Ist die Lok hier deaktiviert, werden keine Lokbefehle
+an die Lok gesendet. Nach einem Klick auf Speichern erscheint die neue Lok in der Lokliste.
 
 ### Lok bearbeiten
 
@@ -227,13 +226,13 @@ Klickt man in der Lokliste auf den Button "Bearbeiten", kann man die Grundeinste
 
 ![DCC-FM22 Lok bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok-bearbeiten.png "Lok bearbeiten")
 
-Durch Einstellung der ID kann man auch den gewünschten Lokeintrag in der Liste von oben nach unten und umgekehrt "wandern" lassen,
-die Lokliste also neu sortieren. Sonst gelten dieselben Einstellungen wie bei einer neuen Lok.
+Durch Setzen der ID kann der gewünschte Lokeintrag auch in der Liste von oben nach unten und umgekehrt "wandern",
+also die Lokliste neu sortieren. Ansonsten gelten die gleichen Einstellungen wie für eine neue Lok.
 
 ### Lok-Funktionen
 
-Die Lok-Funktionen müssen einmal für jeden Lok-Decoder eingestellt werden. Dies geht relativ einfach und zügig, denn die meisten Lok-Funktionen sind
-bereits vordefiniert und müssen lediglich den Funktionstasten F0 bis F31 zugewiesen werden.
+Die Lokfunktionen müssen für jeden Lokdecoder einmal eingestellt werden. Dies ist relativ einfach und schnell zu bewerkstelligen, da die meisten Lokfunktionen
+vordefiniert und müssen nur noch den Funktionstasten F0 bis F31 zugeordnet werden.
 
 Dies geschieht durch Klick auf die Schaltfläche "FX" im unteren Bereich. Dann öffnet sich unterhalb der Schaltfläche folgender Dialog:
 
@@ -246,20 +245,19 @@ Hier sind nun folgende Einstellungen nötig:
 * Puls: Ja/nein
 * Sound: Ja/nein
 
-Der Funktionsname kann aus einer Liste von ca. 250 Bezeichnungen gewählt werden. Mit der Einstellung "Puls" kann man wählen, ob ein Druck auf die Funktionstaste
-lediglich einen kurzen Impuls auslösen soll oder ein Dauersignal. Der kurze Impuls ist sinnvoll bei Geräuschen, die nicht fortwährend abgespielt werden sollen, wie
-zum Beispiel ein Lok-Pfiff.
+Der Funktionsname kann aus einer Liste von ca. 250 Bezeichnungen ausgewählt werden. Mit der Einstellung "Puls" kann gewählt werden, ob ein Druck auf die Funktionstaste
+nur einen kurzen Impuls oder ein Dauersignal auslösen soll. Der kurze Impuls ist sinnvoll bei Geräuschen, die nicht dauerhaft abgespielt werden sollen, wie z.B. ein Lokpfiff.
 
 Die Einstellung "Sound" dient lediglich der Information, ob die gewählte Funktion einen Sound abspielt oder nicht.
 
-Sind alle Einstellungen vorgenommen worden, könnte die Bedienoberfläche für eine Lok mit umfangreichen Lokfunktionen folgendermaßen aussehen:
+Sind alle Einstellungen vorgenommen worden, könnte die Bedienoberfläche für eine Lok mit umfangreichen Lokfunktionen nun folgendermaßen aussehen:
 
 ![DCC-FM22 Loksteuerung im Detail](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok2.png "Loksteuerung im Detail")
 
 ### Lok-Macros
 
-Durch Lok-Macros können bestimmte Aktionen automatisiert ablaufen. Insgesamt sind bis zu 16 Aktionen pro Lok-Macro möglich. Im unteren
-Beispiel sind folgende Aktionen eingestellt:
+Mit Lok-Makros können bestimmte Aktionen automatisiert ausgeführt werden. Insgesamt sind bis zu 16 Aktionen pro Lok-Makro möglich. Im unteren
+Beispiel sind folgende Aktionen definiert:
 
 * Schalte die Funktion F0 sofort ein
 * Schalte die Funktion F2 sofort ein
@@ -289,29 +287,29 @@ Hier ein weiteres Beispiel, um eine Lok im Schattenbahnhof auf Ihrem zugeordnete
 
 ### Zusatzdecoder
 
-Zusatzdecoder sind weitere Decoder im Zug. Das kann zum Beispiel ein Lichtdecoder im Steuerwagen des Zugs sein, hier beispielsweise
+Zusatzdecoder sind zusätzliche Decoder im Zug. Das kann z.B. ein Lichtdecoder im Steuerwagen des Zuges sein, hier z.B.
 für einen IC-Steuerwagen:
 
 ![DCC-FM22 Zusatzdecoder](https://raw.githubusercontent.com/ukw100/FM22/main/images/zusatzdecoder.png "Zusatzdecoder")
 
-Man konfiguriert einen neuen Zusatzdecoder über den entsprechenden Button. Anschließend wählt man aus bzw. stellt man ein:
+Ein neuer Zusatzdecoder wird über die entsprechende Schaltfläche konfiguriert. Anschließend wird ausgewählt bzw. eingestellt:
 
 * Name, z.B. Inennbeleuchtung ICE2
 * Adresse, hier 2001
 * Verknüpfung mit Lok im Zug
 
-Durch die Verknüpfung des Zusatzdecoders mit der dazugehörenden Lok erscheinen die möglichen Zusatzfunktionen des Decoders bei
-der Bedienung der Lok. Ein Beispiel dazu folgt weiter unten.
+Durch die Verknüpfung des Zusatzdecoders mit der zugehörigen Lok werden die möglichen Zusatzfunktionen des Decoders bei der Bedienung der Lok sichtbar.
+Betrieb der Lok. Ein Beispiel dazu folgt weiter unten.
 
 ![DCC-FM22 Zusatzdecoder neu](https://raw.githubusercontent.com/ukw100/FM22/main/images/addon-neu.png "Zusatzdecoder neu")
 
-Durch Klick auf "Bearbeiten lassen sich die Einstellungen nachträglich ändern. Außerdem kann man durch Angabe einer abweichenden ID
-die Reihenfolge der Zusatzdecoder in der Anzeige ändern.
+Durch Klicken auf "Bearbeiten" können die Einstellungen nachträglich geändert werden. Außerdem kann durch Eingabe einer anderen ID
+die Reihenfolge der Zusatzdecoder in der Anzeige geändert werden.
 
 ![DCC-FM22 Zusatzdecoder bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/addon-bearbeiten.png "Zusatzdecoder bearbeiten")
 
-Hier ein Beispiel: Der Zusatzdecoder der im IC Steuerwagen wurde hier mit dem dre Lok "BR 103 Intercity" verknüpft. Nun erscheinen
-bei der entsprechenden Lok die Zusatzfunktionen wie
+Hier ein Beispiel: Der Zusatzdecoder des IC-Steuerwagens wurde hier mit der Lok "BR 103 Intercity" verknüpft. Nun erscheinen
+der entsprechenden Lok die Zusatzfunktionen wie
 
 * F0 Spitzensignal / Schlusslicht rot
 * F1 Fernlicht
@@ -319,27 +317,27 @@ bei der entsprechenden Lok die Zusatzfunktionen wie
 * F3 Führerstandsbeleuchtung
 * F4 Stromführende Kupplung
 
-unterhalb der Bedienungselemente für die Lok. Richtungswechsel der Lok haben auch direkte Auswirkungen auf die eingestellte Richtung
-für den Zusatzdecoder, z.B. den Wechsel der Stirnbeleuchtung von Rot auf Weiß und umgekehrt.
+unter den Bedienelementen der Lokomotive. Fahrtrichtungsänderungen der Lok wirken sich auch direkt auf die eingestellte Fahrtrichtung des Zusatzdecoders aus,
+z. B. das Umschalten der Stirnbeleuchtung von rot auf weiß und umgekehrt.
 
-Hier kann man die Funktion F0 des Zusatzdecoders mit F0 der Lok verknüpfen. Das heißt: Schalte ich nun F0 der Lok ein, wird auch
-automatisch die Funktion F0 des Zusatzdecoders entsprechend der Richtung der Lok aktiviert. Damit ist nun die Stirnbeleuchtung an beiden
-Enden des Zuges entprechend zueinander passend eingestellt.
+Hier kann die Funktion F0 des Zusatzdecoders mit F0 der Lok verknüpft werden. Das heißt, wenn ich jetzt F0 der Lok einschalte, wird automatisch auch
+automatisch die Funktion F0 des Zusatzdecoders entsprechend der Fahrtrichtung der Lok aktiviert. Damit ist nun an beiden Enden des Zuges
+Enden des Zuges entsprechend eingestellt.
 
 ![DCC-FM22 Zusatzdecoder Lok](https://raw.githubusercontent.com/ukw100/FM22/main/images/lok-addon.png "Zusatzdecoder Lok")
 
 ### Weichen
 
-Unter dem Menüpunkt "Weichen" können die Weichen der Anlage konfiguriert werden. Diese bindet man dann später am besten in eine oder
-mehrere Fahrstraßen ein. Dann werden bei Aktivierung einer Fahrstraße direkt Gruppen von Weichen zeitlich versetzt geschaltet, um eine
-Fahrstraße zu bilden.
+Unter dem Menüpunkt "Weichen" können die Weichen der Anlage konfiguriert werden. Diese werden später in eine oder mehrere
+Fahrstraßen eingebunden. Beim Aktivieren einer Fahrstraße werden dann direkt Gruppen von Weichen zeitversetzt geschaltet, um eine Fahrstraße
+für die Lok zu bilden.
 
 ![DCC-FM22 Weichen](https://raw.githubusercontent.com/ukw100/FM22/main/images/weichen.png "Weichen")
 
-In dieser Ansicht kann man die Weichen auch manuell schalten, falls dies ausnahmsweise notwendig sein sollte. Dies geschieht automatisch
-beim Klick auf die entsprechende Schaltfläche wie "Gerade", "Abzweig" und "Abzweig2", wobei letztere nur für 3-Wege-Weichen angezeigt wird.
+In dieser Ansicht können die Weichen auch manuell geschaltet werden, falls dies ausnahmsweise erforderlich sein sollte. Dies geschieht automatisch
+durch Anklicken der entsprechenden Schaltflächen wie "Gerade", "Abzweig" und "Abzweig2", wobei letztere nur bei 3-Wege-Weichen angezeigt wird.
 
-Konfiguriert man eine neue oder bereits vorhandene Weiche, kann man folgende Einstellungen vornehmen:
+Bei der Konfiguration einer neuen oder bereits vorhandenen Weiche können folgende Einstellungen vorgenommen werden:
 
 * Name
 * Adresse
@@ -347,14 +345,14 @@ Konfiguriert man eine neue oder bereits vorhandene Weiche, kann man folgende Ein
 
 ### Fahrstraßen
 
-Fahrstraßen fassen bestimmte Gleise, die duch Weichen angesteuert werden, zu Gruppen zusammen.
+Fahrstraßen fassen bestimmte Gleise, die durch Weichen bedient werden, zu Gruppen zusammen.
 
 Hier ein Beispiel:
 
 ![DCC-FM22 Fahrstraßen](https://raw.githubusercontent.com/ukw100/FM22/main/images/fahrstrassen.png "Fahrstraßen")
 
-Diese Fahrstraße namens "Schattenbahnhof" besteht aus insgesamt 9 Gleisen. Jedes dieser Gleise kann einen Zug ("verknüpfte Lok")
-aufnehmen. Die Gleise kann man - bei verschiedenen Längen sinnvoll - fest mit den Loks verknüpfen oder auch frei wählbar lassen.
+Diese "Schattenbahnhof" genannte Fahrstraße besteht aus insgesamt 9 Gleisen. Jedes dieser Gleise kann einen Zug ("Lokomotive") aufnehmen.
+Die Gleise können - sinnvoll bei unterschiedlichen Längen - fest mit den Lokomotiven verbunden oder frei wählbar sein.
 
 In dieser Ansicht werden dargestellt:
 
@@ -364,71 +362,69 @@ In dieser Ansicht werden dargestellt:
 * Auf dem Gleise erkannte Lok
 
 Welches Gleis der Fahrstraße gerade aktiv ist, wird durch die grüne Markierung in der Spalte ID angezeigt. In unserem Beispiel wurde
-das Gleis 1 ausgewählt, um die verknüpfte Lok einfahren zu lassen. Diese wurde auch erkannt, wie man weiter rechts sieht. Man kann
-ein bestimmtes Gleis auch selbst durch Klick auf die Schaltfläche "Setzen" selber aktivieren. Dann werden alle für dieses Gleis zuständigen
-Weichen automatisch so umgeschaltet, dass der Weg zum Gleis 1 im Schattenbahnhof aktiviert ist.
+Gleis 1 für die Einfahrt der zugeordneten Lok gewählt. Diese wurde auch erkannt, wie rechts zu sehen ist. Du kannst ein bestimmtes Gleis
+auch selbst aktivieren, indem Du auf die Schaltfläche "Setzen" klickst. Dann werden alle zu diesem Gleis gehörenden Weichen automatisch
+so umgestellt, dass das Gleis 1 im Schattenbahnhof aktiviert ist.
 
-Durch Klick auf "Neue Fahrstraße" wird eine neue Fahrstraße erzeugt. Dieser muss man zunächst einen Namen geben:
+Durch Klicken auf "Neue Fahrstraße" wird eine neue Fahrstraße angelegt. Dieser muss zunächst ein Name gegeben werden:
 
 ![DCC-FM22 Neue Fahrstraße](https://raw.githubusercontent.com/ukw100/FM22/main/images/neue-fahrstrasse.png "Neue Fahrstraße")
 
-Die Fahrstraßen lassen sich durch "Bearbeiten" auch nachträglich umbenennen oder durch Wahl einer neuen ID auch umsortieren:
+Eine Umbenennung der Fahrstraßen ist auch nachträglich über den Menüpunkt "Bearbeiten" möglich, ebenso eine Neusortierung der Fahrstraßen durch die Wahl einer neuen ID:
 
 ![DCC-FM22 Fahrstraße bearbeiten 1](https://raw.githubusercontent.com/ukw100/FM22/main/images/fahrstrasse-bearbeiten-1.png "Fahrstraße bearbeiten 1")
 
-Nachdem man eine Fahrstraße angelegt hat, kann man nun im nächsten Schritt die Fahrstraße konfigurieren. Dabei definiert man die dazugehörenden
-Gleise. Im untenstehenden Beispiel wird gezeigt, wie das Gleis 9 der Fahrstraße eingerichtet wird.
+Nachdem ein Fahrweg angelegt wurde, kann im nächsten Schritt der Fahrweg konfiguriert werden. Dabei werden die zugehörigen
+Spuren. Das folgende Beispiel zeigt, wie das Gleis 9 der Fahrstraße konfiguriert wird.
 
-Also wird zunächste der Name festgelegt: "Gleis 9". Anschließende kann man - falls gewünscht - eine Lok mit dem Gleis verknüpfen. Damit
-bekommt die Lok ein "Heimatgleis", welches sie immer anfahren kann, wenn sie abgestellt werden soll:
+Zuerst wird der Name festgelegt: "Gleis 9". Anschließend kann - falls gewünscht - eine Lokomotive mit dem Gleis verknüpft werden. Damit
+Damit hat die Lok ein "Heimatgleis", das sie immer anfahren kann, wenn sie abgestellt werden soll:
 
 ![DCC-FM22 Fahrstraße bearbeiten 2](https://raw.githubusercontent.com/ukw100/FM22/main/images/fahrstrasse-bearbeiten-2.png "Fahrstraße bearbeiten 2")
 
-Als letztes müssen noch die Weichen so eingestellt werden, dass die Lok auch ihr Heimatgleis erreichen kann. Im Beispiel ist dafür hier
-notwendig:
+Zuletzt müssen die Weichen so gestellt werden, dass die Lokomotive auch ihr Heimatgleis erreichen kann. Im Beispiel sind dazu erforderlich:
 
 * Weiche 5 auf Abzweig
 * Weiche 3 auf Gerade
 * Weiche 7 auf Abzweig
 * Weiche 4 auf Gerade
 
-Wird die Lok nun im Laufe Ihrer Fahrt irgendwann in den Schattenbahnhof geleitet, werden sich anschließend die Weichen automatisch auf
-das Heimatgleis einstellen, die Lok ihre Fahrt verlangsamen und am Ende sicher auf dem Heimatgleis zum Stehen kommen. Wie hier das
-Zusammenspiel von RC-Detektoren, S88-Kontakten und Fahrstraßen funktioniert, wird weiter unten detailliert erklärt.
+Wenn die Lok irgendwann während der Fahrt in den Schattenbahnhof einfährt, stellen sich die Weichen automatisch auf das Heimatgleis.
+Die Lok verlangsamt ihre Fahrt und kommt schließlich sicher auf dem Heimatgleis zum Stehen. Wie hier das Zusammenspiel von RC-Detektoren,
+S88-Kontakten und Fahrstraßen funktioniert, wird später weiter unten im Detail erklärt.
 
 ### Signale
 
-Signale sind nicht für die Steuerung notwendig. Sie dienen nur der optischen Anzeige. Die Steuerung selbst geschieht ausnahmslos über
-die FM22-Zentrale.
+Die Signale sind für die Steuerung nicht erforderlich. Sie dienen lediglich der optischen Anzeige. Die Steuerung selbst erfolgt ausnahmslos
+die Zentrale FM22.
 
-Unter dem Menüpunkt "Signale" werden die Signale definiert. Hier werden nur Signale unterstützt, die lediglich 2 Zustände kennen. Unter
-dem Menüpunkt "LEDs" können bis zu 8 LEDs zu einem Signal zusammengefasst werden. Dazu kommen wir weiter unten.
+Unter dem Menüpunkt "Signale" werden die Signale definiert. Hier werden nur Signale unterstützt, die lediglich 2 Zustände kennen.
+Unter dem Menüpunkt "LEDs" können bis zu 8 LEDs zu einem Signal zusammengefasst werden. Dazu später mehr.
 
 Im Beispiel unten wurden 4 Signale konfiguriert:
 
 ![DCC-FM22 Signale](https://raw.githubusercontent.com/ukw100/FM22/main/images/signale.png "Signale")
 
-Neben dem Namen und der Adresse wird hier auch der aktuelle Anzeigestatus der Signale angezeigt. im oberen Beispiel befinden sich zwei Signale
-im Zustand "Fahrt" und zwei im Zustand "Halt". Das wird auch durch die Farben Grün und Rot entsprechend angezeigt. Durch Klick auf
-die entsprechenden Schaltflächen kann man den Zustand der Signale manuell wechseln. Sinnvoller ist jedoch so ein Lichtsignalwechsel
-über eine Aktion eines RC-Detektors oder S88-Kontaktgleises.
+Neben dem Namen und der Adresse wird auch der aktuelle Anzeigestatus der Signale angezeigt. im obigen Beispiel befinden sich zwei Signale
+im Zustand "Fahrt" und zwei im Zustand "Halt". Dies wird durch die Farben grün und rot entsprechend angezeigt. Durch Anklicken der
+entsprechenden Schaltflächen kann der Zustand der Signale manuell geändert werden. Sinnvoller ist es jedoch, einen solchen Signalwechsel
+über eine Aktion eines RC-Detektors oder S88-Kontaktgleises ausführen zu lassen.
 
-Neben der Neuanlage eines Signals kann man diese auch noch nachträglich bearbeiten. Hier lässt sich neben dem Namen und der Adresse auch noch
-die Anzeigereihenfolge über die ID bewerkstelligen:
+Neben der Neuanlage eines Signals ist auch eine nachträgliche Bearbeitung möglich. Hierbei kann neben dem Namen und der Adresse auch die
+die Signalfolge über die ID geändert werden:
 
 ![DCC-FM22 Signal bearbeiten](https://raw.githubusercontent.com/ukw100/FM22/main/images/signal-bearbeiten.png "Signal bearbeiten")
 
 ### LEDs
 
-Unter dem Menüpunkt "LEDs" können Lichtsignale gesteuert werden, die mehr als 2 Zustände anzeigen können. Das sind entweder komplexere
-Lichtsignale oder es können auch Beleuchtungen von Gebäuden sein, zum Beispiel durch Verwendung eine FM22-RC-Detektors mit WS2812-LED-Ausgang.
+Unter dem Menüpunkt "LEDs" können Lichtsignale angesteuert werden, die mehr als 2 Zustände anzeigen können. Dies sind entweder komplexere
+Lichtsignale oder es können auch Gebäudebeleuchtungen sein, z.B. bei Verwendung eines FM22-RC Detektors mit WS2812-LED-Ausgang.
 
-In der Regel werden für komplexe Lichtsignale sogenannte "erweiterte Zubehördecoder" verwendet. Hier werden dann zum Decoder nicht
-nur zwei Zustände wie "Fahrt" und "Halt" übertragen, sondern ein ganzer Byte-Wert, welches insgesamt 256 Zustände annehmen kann bzw. bis zu 8 LEDs
-unabhängig voneinander steuert.
+Für komplexe Lichtsignale werden in der Regel sogenannte "erweiterte Zubehördecoder" verwendet. Hier werden zum Decoder nicht nur zwei Zustände
+wie "Fahrt" und "Halt" übertragen, sondern ein ganzer Bytewert, der insgesamt 256 Zustände annehmen kann bzw. bis zu 8 LEDs
+unabhängig voneinander ansteuern kann.
 
-Im untenstehenden Beispiel wurden zwei LED-Gruppen von je 8 LEDs angelegt, nämlich ein "Brückenstellwerk" und noch die Beleuchtung
-des Bahnhofs "Kümmelhausen":
+Im folgenden Beispiel wurden zwei LED-Gruppen mit je 8 LEDs erzeugt, nämlich ein "Brückenstellwerk" und die Beleuchtung des Bahnhofs "Kümmelhausen":
 
 ![DCC-FM22 LEDs](https://raw.githubusercontent.com/ukw100/FM22/main/images/leds.png "LEDs")
 
