@@ -779,12 +779,12 @@ Diese werden dann in einer Tabelle angezeigt. Hier ein Beispiel eines ESU-Decode
 
 ![DCC-FM22 Funktionsausgänge ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-ausgaenge-4.png "Funktionsausgänge ESU")
 
+<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/pom-ausgaenge-5.png">
+
 Man kann nun den sogenannten "Mode" des Ausgangs über eine Dropdown-Liste anpassen. Ebenso kann man eine Einschalt- und Ausschaltverzögerung konfigurieren.
 Die automatische Abschaltung sorgt dafür, dass der Ausgang nach einer wählbaren Dauer automatisch deaktiviert wird. Das ist unter anderem für die Steuerung
 von Kupplungen notwendig und daher wichtig. Jeden Ausgang kann man noch mit einer Pulsweitenmodulation (PWM) belegen, die als Helligkeit für LEDs genutzt werden
 kann. Dabei bedeutet der Wert "0" "LED dunkel", der Wert "31" "maximale Helligkeit", alles andere dazwischen entsprechende Zwischenwerte.
-
-<img align="right" src="https://github.com/ukw100/FM22/blob/main/images/pom-ausgaenge-5.png">
 
 Einige der möglichen Modes sind rechts aufgelistet. Für jeden der möglichen Ausgänge können mit einem Klick aus der Liste ausgewählt werden.
 
