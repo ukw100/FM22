@@ -692,20 +692,68 @@ in der letzten Zeile die CV-Werte individuell anpassen.
 
 ### POM Funktionsmapping
 
-![DCC-FM22 Funktionsmapping](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-1.png "Funktionsmapping")
+Über den Menüpunkt "Funktionsmapping" kann für Decoder einiger Hersteller das Funktionsmapping ausgelesen und geändert werden. Leider arbeiten hier die Hersteller
+nicht einheitlich. Viele favorisieren hier ihre eigenen Methoden, wie sie das Funktionsmapping in CV-Konfigurationsvariablen speichern. Im folgenden wird hier das
+Funktionsmapping von Lenz (einfach) und auch ESU (komplex, aber vielfältig) besprochen.
 
-![DCC-FM22 Funktionsmapping Lenz](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-lenz.png "Funktionsmapping Lenz")
-
-![DCC-FM22 Funktionsmapping ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-esu.png "Funktionsmapping ESU")
-
-### POM Funktionsmapping
+Zunächst gibt man nach dem Auswahl des Menüpunkts die Lokadresse ein. Die Zentrale ermittelt dann im ersten Schritt den Hersteller:
 
 ![DCC-FM22 Funktionsmapping](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-1.png "Funktionsmapping")
 
+Im Falle eines Lenz-Decoders wird zunächst gefragt, ob der Decoder 4 oder 8 Ausgänge unterstützt. Je nach Angabe erscheint dann eine entsprechende
+Tabelle, mit welcher Funktionstaste F0 - F28 welcher Ausgang angesteuert wird:
+
 ![DCC-FM22 Funktionsmapping Lenz](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-lenz.png "Funktionsmapping Lenz")
+
+Die grünen Kästchen zeigen die Verknüpfung der Funktionstaste zum jeweiligen Ausgang an. Möchte man diese Konfiguration ändern, klickt man einfach auf die
+entsprechende Tabellenzelle, um eine Verknüpfung herzustellen oder wieder zu löschen. Am Schluss klickt man auf die Schaltfläche "Änderungen senden".
+Die geänderte Konfiguration wird dann im Decoder geändert.
+
+Das Funktionsmapping von ESU ist hier wesentlich umfangreicher angelegt. Hier erkauft man sich die erweiterte Funktionalität aber auch mit einer erheblich höheren Komplexität.
+Während hier die Programmierung über einzelne CVs zu einem aussichtslosen Unterfangen wird, kann das ESU-Funktionsmapping mit der FM22-Zentrale mit ein paar Mausklicks
+erledigt werden.
+
+Dabei muss man zunächst das Prinzip verstehen:
+
+Während andere Hersteller eine direkte Verknüpfung einer Funktionstaste zu einem Ausgang vornehmen (siehe obiges Beispiel "Lenz"), gibt es hier einfach nur sogenannte
+"Konfigurationszeilen". Diese bestehen aus bis zu 72 Zeilen bestehen. Standardmäßig sind lediglich 16 Zeilen mit einer Konfiguration belegt, deshalb kann man hier
+auswähle, ob man die ersten 16, 32 oder 72 Zeilen einlesen möchte. Der Grund für diese Abfrage ist lediglich die für die Ermittlung der Werte erforderliche Zeitdauer. Das
+Einlesen von 16 Zeilen dauert ca. 3-4 Sekunden, das Einlesen von 72 Zeilen dauert dann entsprechend länger - auch wenn diese Zeilen eventuell nicht genutzt werden.
+
+Das Prinzip ist nun, dass man Bedingungen mit Ausgängen oder einer Logik verknüpft. Das kann in einer beliebigen Konfigurationszeile erfolgen, die nicht unbedingt an
+eine bestimmte Funktionstaste verknüpft sein muss. Im Gegenteil: Ein Ausgang kann auch mit mehreren Funktionstasten verknüpft werden, die dann alle gleichzeitig
+gedrückt werden müssen!
+
+Das Standard-Funktionsmapping von ESU sieht folgendermaßen aus:
 
 ![DCC-FM22 Funktionsmapping ESU](https://raw.githubusercontent.com/ukw100/FM22/main/images/pom-mapping-esu.png "Funktionsmapping ESU")
 
+Rote Kästchen bedeuten hier, dass die Bedingung (Funktionstaste) ausgeschaltet ist, grüne Kästchen bedeuten eine eingeschaltete Bedingung.
+
+Dann erhalten die Konfigurationszeilen folgende Bedeutungen:
+
+* Zeile 1: Wenn Vorwärtsrichtung an und F0 an, dann Licht vorn an.
+* Zeile 2: Wenn Vorwärtsrichtung aus und F0 an, dann Licht hinten an.
+* Zeile 3: Wenn Vorwärtsrichtung an und F1 an, dann Ausgang AUX1 an.
+* Zeile 4: Wenn F2 an, dann Ausgang AUX2 an.
+* Zeile 5: Wenn F3 an, dann Logik "Rangiergang" an.
+* Zeile 6: Wenn F4 an, dann Logik "ABV" an.
+* Zeile 7: Wenn F5 an, dann AUX3 an.
+* Zeile 8: Wenn F6 an, dann AUX4 an.
+* usw.
+
+Nun kann man durch Klick auf eine Tabellenzelle die Bedeutung einer Verknüpfung ändern.
+
+Der Klick auf eine Zelle in den Spalten "Bedingung" löst folgendes aus:
+
+* Erster Klick: Bedingung wird grün, d.h. der oder die Ausgänge werden gesetzt/gelöscht, wenn die Bedingung zutrifft.
+* Zweiter Klick: Bedingung wird rot d.h. der oder die Ausgänge werden gesetzt/gelöscht, wenn die Bedingung NICHT zutrifft.
+* Dritter Klick: Bedingung wird farblos, d.h. die Verknüpfung wird gelöscht.
+
+Der Klick auf eine Zelle in den Spalten "Ausgang" oder "Logik" löst folgendes aus:
+
+* Erster Klick: Ausgang wird grün, d.h. Ausgang/Logik wird für die gegebenen Bedingungen gesetzt.
+* Zweiter Klick: Bedingung wird farblos, d.h. die Verknüpfung zur Bedingung wird gelöscht.
 
 ### POM Funktionsausgänge
 
