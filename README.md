@@ -37,7 +37,7 @@ Der Betrieb erfolgt "halbautomatisch", d.h. bei bestimmten Ereignissen können v
 in der Hand und kontrolliert bzw. steuert die Abläufe selbst.
 
 Durch den konsequenten Einsatz von RailCom ist die Zentrale jederzeit darüber informiert, wo sich welcher Zug befindet. Die Abbildung aller Ortungsdaten auf einem Gleisplan ist
-Gleisplan ist in Entwicklung.
+in Entwicklung.
 
 ## Inhaltsverzeichnis
 
