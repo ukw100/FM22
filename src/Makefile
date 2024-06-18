@@ -27,6 +27,9 @@ INC = $(HTTP_INC) millis.h msg.h userio.h serial.h func.h loco.h addon.h sig.h f
 fm22: $(OBJ)
 	c++ $(OBJ) -l bcm2835 -o fm22
 
+other: $(OBJ)
+	c++ $(OBJ) -o fm22
+
 clean:
 	rm -f *.o fm22
 
