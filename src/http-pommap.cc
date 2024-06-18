@@ -489,7 +489,7 @@ get_lenz_mapping (uint_fast16_t addr)
 
         if (! POM::pom_read_cv (&value, addr, cv))
         {
-            fprintf (stderr, "read error: cv=%u\n", cv);
+            fprintf (stderr, "read error: cv=%u\n", (unsigned int) cv);
             break;
         }
 
@@ -559,7 +559,7 @@ get_zimo_mapping (uint_fast16_t addr)
 
         if (! POM::pom_read_cv (&value, addr, cv))
         {
-            fprintf (stderr, "read error: cv=%u\n", cv);
+            fprintf (stderr, "read error: cv=%u\n", (unsigned int) cv);
             break;
         }
 
@@ -799,7 +799,7 @@ get_tams_mapping (uint_fast16_t addr, uint_fast16_t lines)
                         {
                             if (! POM::pom_read_cv (&value, addr, cv + col))
                             {
-                                fprintf (stderr, "read error: cv=%u\n", cv + col);
+                                fprintf (stderr, "read error: cv=%u\n", (unsigned int) (cv + col));
                                 break;
                             }
 

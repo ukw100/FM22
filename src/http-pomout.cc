@@ -566,7 +566,7 @@ HTTP_POMOUT::action_setoutputesu (void)
                 }
             }
 
-            printf ("setoutputesu: line=%u col=%u old_value=%u new_value=%u changes=%u\n", line, col, old_value, new_value, esu_output_changes);
+            printf ("setoutputesu: line=%u col=%u old_value=%u new_value=%u changes=%u\n", (unsigned int) line, col, old_value, new_value, (unsigned int) esu_output_changes);
         }
         else
         {
@@ -617,11 +617,11 @@ HTTP_POMOUT::action_saveoutputesu (void)
                                 esu_output_changes--;
                             }
 
-                            printf ("saveoutputesu: write successful, cv=%u value=%u changes=%u\n", cv, new_value, esu_output_changes);
+                            printf ("saveoutputesu: write successful, cv=%u value=%u changes=%u\n", (unsigned int) cv, new_value, (unsigned int) esu_output_changes);
                         }
                         else
                         {
-                            printf ("saveoutputesu: write error, addr=%u, cv=%u, value=%u\n", addr, cv, new_value);
+                            printf ("saveoutputesu: write error, addr=%u, cv=%u, value=%u\n", (unsigned int) addr, (unsigned int) cv, new_value);
                         }
                     }
                 }
